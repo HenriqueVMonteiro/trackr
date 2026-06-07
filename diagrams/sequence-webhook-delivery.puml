@@ -1,0 +1,58 @@
+@startuml sequence-webhook-delivery
+title Trackr — Webhook delivery flow (asíncrono, Agente B + ADR-0007)
+
+note across
+  Esse diagrama mostra como um evento de domínio publicado em A vira
+  uma entrega de webhook duradoura.
+  Implementado parcialmente por A (Outbox infraestrutura)
+  e completado por B (BullMQ Strategy + Signer + worker).
+end note
+
+participant "Use case\n(ex: TransitionIssue)" as UC
+participant "EventBus\n(GoF: Observer)" as Bus
+participant "DrizzleOutboxStore\n(ADR-0007)" as Outbox
+database "Postgres" as DB
+participant "OutboxRelay\n(loop)" as Relay
+participant "WebhookSubscriber\n(B3)" as Sub
+participant "BullMqDeliveryQueue\n(B3)" as Queue
+participant "webhook-worker\n(B3)" as Worker
+participant "RetryStrategy\n(GoF: Strategy)" as Strat
+participant "WebhookSigner\n(GoF: Strategy / SOLID:LSP)" as Signer
+participant "Endpoint externo\n(Slack/Discord/...)" as Ext
+
+UC -> Outbox: enqueue(event)
+Outbox -> DB: INSERT INTO outbox VALUES (...)
+... transação commit ...
+
+Relay -> Outbox: fetchUnpublished(50)
+Outbox -> DB: SELECT * FROM outbox WHERE published_at IS NULL
+DB --> Outbox: rows
+Outbox --> Relay: records[]
+
+loop para cada record
+  Relay -> Bus: publish(event)
+  Bus -> Sub: handle(event)
+  Sub -> Queue: enqueue(deliveryJob)
+end
+
+Relay -> Outbox: markPublished(ids, now)
+Outbox -> DB: UPDATE outbox SET published_at=$1 WHERE id IN (...)
+
+Queue -> Worker: takeJob()
+Worker -> Strat: nextDelay(attempt)
+Worker -> Signer: sign(payload, secret)
+Worker -> Ext: POST /webhook\nX-Trackr-Signature: ...
+alt 2xx
+  Ext --> Worker: 200
+  Worker -> Queue: ack
+else 4xx/5xx/timeout
+  Ext --> Worker: error
+  Worker -> Strat: shouldRetry(attempt, error)
+  alt should retry
+    Worker -> Queue: enqueue with delay
+  else exhausted
+    Worker -> Queue: dead-letter
+  end
+end
+
+@enduml

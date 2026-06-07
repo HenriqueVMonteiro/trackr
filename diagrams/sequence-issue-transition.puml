@@ -1,0 +1,58 @@
+@startuml sequence-issue-transition
+title Trackr — Issue transition flow (POST /api/v1/issues/{id}/transitions)
+
+actor "User\n(Dev / PM)" as User
+participant "Next.js route\n[issueId]/transitions/route.ts" as HTTP
+participant "requireAuth\n(_auth.ts)" as Auth
+participant "TransitionIssueBody\n(Zod)" as Zod
+participant "TransitionIssue\nUse case" as UC
+participant "IssueRepository\n(port)" as Repo
+participant "Issue\n(entity)" as Issue
+participant "IssueStateMachine\n(GoF: State)" as SM
+participant "EventBus\n(GoF: Observer)" as Bus
+participant "OutboxStore\n(ADR-0007)" as Outbox
+participant "DrizzleIssueRepository\n(adapter)" as Drizzle
+database "Postgres" as DB
+
+User -> HTTP: POST { to: "in_progress" }\nAuthorization: Bearer ...
+HTTP -> Auth: requireAuth(request)
+Auth --> HTTP: { ok, user }
+HTTP -> Zod: parse(body)
+Zod --> HTTP: parsed.data
+
+HTTP -> UC: execute({ actorId, issueId, to })
+UC -> Repo: findById(issueId)
+Repo -> Drizzle: findById(issueId)
+Drizzle -> DB: SELECT * FROM issues WHERE id=$1
+DB --> Drizzle: row
+Drizzle --> Repo: Issue.fromPersistence(row)
+Repo --> UC: Issue
+
+UC -> Issue: transitionTo(to, now)
+Issue -> SM: transition(from, to, { approverId })
+SM --> Issue: Result<status, InvalidTransitionError>
+alt transition allowed
+  Issue --> UC: Ok(newIssue)
+  UC -> Repo: save(newIssue)
+  Repo -> Drizzle: save(newIssue)
+  Drizzle -> DB: INSERT ... ON CONFLICT UPDATE
+  DB --> Drizzle: ok
+  UC -> Bus: publish(IssueTransitioned)
+  Bus -> Outbox: (future: enqueue durably)
+  note right of Bus
+    Subscribers in-process:
+    - ActivityLog (Memento snapshot)
+    - WebhookDispatcher (BullMQ — B3)
+    - NotificationDispatcher (B5)
+    - Realtime broadcaster (B5)
+  end note
+  UC --> HTTP: Ok({ issue })
+  HTTP --> User: 200 { issue: ... }
+else invalid transition
+  Issue --> UC: Err(InvalidTransitionError)
+  UC --> HTTP: Err(...)
+  HTTP -> HTTP: domainErrorToProblem(error)
+  HTTP --> User: 422 application/problem+json\n{ type, title, detail, currentState, attemptedState }
+end
+
+@enduml
