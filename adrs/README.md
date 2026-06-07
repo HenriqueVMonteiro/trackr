@@ -28,7 +28,7 @@ Veja [`template.md`](./template.md) para o modelo.
 | 0004 | Supabase Auth vs NextAuth vs Lucia | Planned (stint B1) | Agente B |
 | 0005 | REST + OpenAPI vs GraphQL | Planned (stint A11) | Agente A |
 | 0006 | BullMQ + Upstash vs Inngest vs Vercel Cron | Planned (stint B2) | Agente B |
-| 0007 | Outbox Pattern para entrega confiável de eventos | Planned (stint A8) | Agente A |
+| [0007](./0007-outbox-pattern.md) | Outbox Pattern para entrega confiável de eventos | Accepted | Agente A |
 | 0008 | FTS Postgres vs MeiliSearch (**reversão**) | Planned (stint B7) | Agente B |
 
 ## Convenções
