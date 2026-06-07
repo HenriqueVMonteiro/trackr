@@ -1,0 +1,77 @@
+@startuml classes-gof-issues
+title GoF patterns in the Issues bounded context (Agente A)
+
+skinparam packageStyle rect
+
+package "GoF: State (issues/domain/state)" {
+  interface IssueState {
+    + name: IssueStatus
+    + attempt(next, ctx): Result<IssueStatus, InvalidTransitionError>
+  }
+
+  class BacklogState
+  class TodoState
+  class InProgressState
+  class InReviewState
+  class DoneState {
+    note: only transitions to todo (reopen)
+  }
+  class CanceledState {
+    note: terminal — rejects all
+  }
+
+  IssueState <|.. BacklogState
+  IssueState <|.. TodoState
+  IssueState <|.. InProgressState
+  IssueState <|.. InReviewState
+  IssueState <|.. DoneState
+  IssueState <|.. CanceledState
+
+  class IssueStateMachine << (S,#orange) static >> {
+    + of(status): IssueState
+    + canTransition(from, to, ctx): boolean
+    + transition(from, to, ctx): Result
+  }
+  IssueStateMachine ..> IssueState : returns
+  IssueStateMachine "1" o-- "1..*" IssueState : registers
+}
+
+class Issue {
+  - props: IssueProps
+  + create(props): Result<Issue>
+  + transitionTo(next, at): Result<Issue>
+  + assign(userId, at): Issue
+  + edit(fields, at): Result<Issue>
+}
+Issue ..> IssueStateMachine : delegates transition
+
+package "GoF: Composite (issues/domain/IssueTree.ts) - implemented in A8" {
+  class IssueTree
+  IssueTree "1" o-- "0..*" Issue : children
+  IssueTree ..> Issue : recursive walk / progress
+}
+
+package "GoF: Memento (issues/domain/ActivitySnapshot.ts) - implemented in A8" {
+  class ActivitySnapshot {
+    + before: IssueProps | null
+    + after: IssueProps
+    + diff: structural
+  }
+  ActivitySnapshot ..> Issue : captures
+}
+
+package "GoF: Observer (shared/events/EventBus.ts)" {
+  interface EventBus {
+    + publish(event)
+    + subscribe(type, handler)
+  }
+  class InMemoryEventBus implements EventBus
+}
+
+note as N1
+  Agente B adiciona seus padrões em
+  diagrams/classes-gof-b.puml
+  (Strategy, Factory Method, Decorator)
+end note
+
+@enduml
