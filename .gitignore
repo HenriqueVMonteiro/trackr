@@ -42,3 +42,6 @@ next-env.d.ts
 
 # turbo
 .turbo
+
+# claude code session artifacts
+.claude/
