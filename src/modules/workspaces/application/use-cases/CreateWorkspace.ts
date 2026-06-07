@@ -1,3 +1,5 @@
+import type {
+  ValidationError} from "@/shared";
 import {
   ok,
   err,
@@ -6,8 +8,7 @@ import {
   type IdGenerator,
   ID_PREFIXES,
   type EventBus,
-  ConflictError,
-  ValidationError,
+  ConflictError
 } from "@/shared";
 import {
   Workspace,

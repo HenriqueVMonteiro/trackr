@@ -1,3 +1,5 @@
+import type {
+  ValidationError} from "@/shared";
 import {
   ok,
   err,
@@ -6,8 +8,7 @@ import {
   type IdGenerator,
   type EventBus,
   NotFoundError,
-  ForbiddenError,
-  ValidationError,
+  ForbiddenError
 } from "@/shared";
 import {
   type Workspace,

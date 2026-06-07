@@ -1,3 +1,5 @@
+import type {
+  ValidationError} from "@/shared";
 import {
   ok,
   err,
@@ -6,8 +8,7 @@ import {
   type IdGenerator,
   type EventBus,
   ID_PREFIXES,
-  ConflictError,
-  ValidationError,
+  ConflictError
 } from "@/shared";
 import { Project, PROJECT_CREATED, type ProjectCreatedEvent } from "../../domain";
 import type { ProjectRepository } from "../ports/ProjectRepository";
