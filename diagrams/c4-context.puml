@@ -1,0 +1,30 @@
+@startuml C4-Context-Trackr
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+LAYOUT_WITH_LEGEND()
+
+title Trackr — System Context (C4 nivel 1)
+
+Person(dev, "Desenvolvedor", "Membro de time. Cria, comenta e resolve issues.")
+Person(pm, "Product Manager / Tech Lead", "Cria projetos, planeja sprints, vê dashboards.")
+Person(admin, "Workspace Owner", "Cadastra membros, configura webhooks.")
+
+System(trackr, "Trackr", "Issue tracker modular. Workspaces, projetos, issues com workflow, sprints, dashboards, webhooks e notificações multi-canal.")
+
+System_Ext(supabase, "Supabase", "Auth + Postgres + Realtime broadcast.")
+System_Ext(upstash, "Upstash Redis", "Cache de queries quentes + filas BullMQ.")
+System_Ext(resend, "Resend", "Envio de email transacional.")
+System_Ext(webpush, "Web Push (browser vendors)", "Notificações push via VAPID.")
+System_Ext(integrations, "Integrações externas\n(Slack, Discord, GitHub, ...)", "Recebem webhooks HTTPS assinados (HMAC-SHA256).")
+
+Rel(dev, trackr, "Consulta issues, transiciona estado, comenta", "HTTPS")
+Rel(pm, trackr, "Cria projetos, planeja sprints, vê dashboards", "HTTPS")
+Rel(admin, trackr, "Configura workspace e webhooks", "HTTPS")
+
+Rel(trackr, supabase, "Auth JWT, leitura/escrita SQL, broadcast realtime", "HTTPS/WebSocket")
+Rel(trackr, upstash, "Cache + filas", "REST/HTTPS")
+Rel(trackr, resend, "Envia emails de notificação", "REST/HTTPS")
+Rel(trackr, webpush, "Envia push notifications", "HTTPS + VAPID")
+Rel(trackr, integrations, "Dispara webhooks HMAC-assinados", "HTTPS")
+
+@enduml

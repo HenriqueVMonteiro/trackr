@@ -1,0 +1,38 @@
+@startuml C4-Container-Trackr
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+LAYOUT_WITH_LEGEND()
+
+title Trackr — Containers (C4 nivel 2)
+
+Person(user, "Usuário", "Dev / PM / Admin")
+
+System_Boundary(trackr, "Trackr") {
+  Container(web, "Web Application", "Next.js 15 + React 19 + TypeScript", "UI Server Components + Server Actions + Route Handlers REST.\nCamada interface dos módulos hexagonais.")
+  Container(workers, "Background Workers", "Node.js + BullMQ", "Consome filas: webhook delivery, notification dispatch, materialized view refresh, outbox relay.")
+  ContainerDb(db, "Postgres", "Supabase Postgres", "Persistência principal.\nSchemas por módulo, RLS por workspace, outbox table, materialized views.")
+  ContainerDb(redis, "Redis", "Upstash Redis", "Cache de queries de busca / lista de issues quentes.\nFilas BullMQ para entrega assíncrona.")
+}
+
+System_Ext(supa_auth, "Supabase Auth", "JWT + RLS")
+System_Ext(supa_rt, "Supabase Realtime", "Broadcast in-app")
+System_Ext(resend, "Resend", "Email")
+System_Ext(webpush, "Web Push", "VAPID")
+System_Ext(integrations, "Integrações externas")
+
+Rel(user, web, "Acessa via browser", "HTTPS")
+
+Rel(web, supa_auth, "Verifica JWT", "HTTPS")
+Rel(web, db, "Leitura/escrita SQL via Drizzle ORM", "TCP")
+Rel(web, redis, "Cache read/write", "REST/HTTPS")
+Rel(web, supa_rt, "Publica eventos in-app", "WebSocket")
+
+Rel(workers, db, "Lê outbox, atualiza delivery attempts, refresh views", "TCP")
+Rel(workers, redis, "Consome filas BullMQ", "REST/HTTPS")
+Rel(workers, resend, "Envia emails", "REST/HTTPS")
+Rel(workers, webpush, "Envia push", "HTTPS + VAPID")
+Rel(workers, integrations, "Entrega webhooks assinados (HMAC-SHA256)", "HTTPS")
+
+Rel(supa_rt, user, "Streams notificações in-app", "WebSocket")
+
+@enduml
