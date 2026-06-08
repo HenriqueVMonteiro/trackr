@@ -29,7 +29,7 @@ Veja [`template.md`](./template.md) para o modelo.
 | [0005](./0005-rest-openapi-vs-graphql.md) | REST + OpenAPI vs GraphQL | Accepted | Agente A |
 | [0006](./0006-bullmq-vs-inngest-vs-vercel-cron.md) | BullMQ + Upstash vs Inngest vs Vercel Cron | Accepted | Agente B |
 | [0007](./0007-outbox-pattern.md) | Outbox Pattern para entrega confiável de eventos | Accepted | Agente A |
-| 0008 | FTS Postgres vs MeiliSearch (**reversão**) | Planned (stint B7) | Agente B |
+| [0008](./0008-fts-postgres-vs-meilisearch.md) | FTS Postgres vs MeiliSearch (**reversão**) | Accepted (supersedes earlier MeiliSearch proposal) | Agente B |
 | [0009](./0009-activity-log-inline-capture.md) | Activity Log inline capture per use case (Memento) | Accepted | Agente A |
 
 ## Convenções

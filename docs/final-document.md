@@ -97,7 +97,7 @@ Foram identificados **três atributos prioritários** com justificativa específ
 
 ### 2B. Registro de Decisões Arquiteturais (ADRs)
 
-Os ADRs vivem em `/adrs` no repositório. Foram registradas **8 ADRs** (mínimo do edital: 5), uma das quais documenta uma **decisão revertida** conforme recomendação explícita do edital.
+Os ADRs vivem em `/adrs` no repositório. Foram registradas **9 ADRs** (mínimo do edital: 5), uma das quais (ADR-0008) documenta uma **decisão revertida** conforme recomendação explícita do edital.
 
 | # | Título | Status | Autor |
 |---|--------|--------|-------|
@@ -108,7 +108,7 @@ Os ADRs vivem em `/adrs` no repositório. Foram registradas **8 ADRs** (mínimo 
 | [0005](../adrs/0005-rest-openapi-vs-graphql.md) | REST + OpenAPI vs GraphQL vs gRPC | Accepted | Agente A |
 | [0006](../adrs/0006-bullmq-vs-inngest-vs-vercel-cron.md) | BullMQ + Upstash vs Inngest vs Vercel Cron | Accepted | Agente B |
 | [0007](../adrs/0007-outbox-pattern.md) | Outbox Pattern para entrega confiável de eventos | Accepted | Agente A |
-| 0008 | FTS Postgres vs MeiliSearch (**reversão**) | `[B]` Planned | Agente B |
+| [0008](../adrs/0008-fts-postgres-vs-meilisearch.md) | FTS Postgres vs MeiliSearch (**reversão**) | Accepted (supersedes earlier MeiliSearch proposal) | Agente B |
 | [0009](../adrs/0009-activity-log-inline-capture.md) | Activity Log inline capture per use case (Memento) | Accepted | Agente A |
 
 Cada ADR contém: contexto, decisão, consequências (positivas/negativas/neutras), e alternativas consideradas. ADR-0008 (a ser escrita pelo Agente B no stint B7) documentará a reversão: inicialmente a equipe considerou MeiliSearch como motor de busca dedicado, e revertou para Full-Text Search do Postgres ao reavaliar o custo operacional vs ganho.
