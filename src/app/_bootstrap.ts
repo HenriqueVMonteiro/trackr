@@ -18,6 +18,7 @@ import {
   buildNotificationChannels,
   type NotificationsModule,
 } from "@/modules/notifications";
+import { createReportsModule, type ReportsModule } from "@/modules/reports";
 
 // Composition root for the entire application. Route handlers + server
 // actions import container() and get fully-wired modules. Initialized
@@ -36,6 +37,7 @@ export interface AppContainer {
   labels: LabelsModule;
   webhooks: WebhooksModule;
   notifications: NotificationsModule;
+  reports: ReportsModule;
 }
 
 let _container: AppContainer | null = null;
@@ -92,6 +94,11 @@ export function container(): AppContainer {
   });
   notifications.registerSubscribers();
 
+  // Reports: read-only aggregations sobre issues (cycle time, throughput,
+  // status distribution). Materialized views planejadas em produção — ver
+  // drizzle/sql/views/README.md.
+  const reports = createReportsModule({ db });
+
   _container = {
     db,
     clock,
@@ -104,6 +111,7 @@ export function container(): AppContainer {
     labels,
     webhooks,
     notifications,
+    reports,
   };
   return _container;
 }
