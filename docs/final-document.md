@@ -1,11 +1,11 @@
 # Trackr — Trabalho Final da Disciplina de Arquitetura de Software
 
-> **Status:** rascunho consolidado pelo Agente A; seções marcadas `[B]` aguardam contribuição do Agente B (stints B1–B12).
+> **Status:** Consolidado — Agente A (A1–A14) + Agente B (B1–B12) entregues e mergeados em main. 358 testes unitários verde, 9 ADRs aceitas, 7 padrões GoF implementados, 5 princípios SOLID evidenciados.
 > **Repositório:** https://github.com/HenriqueVMonteiro/trackr
 > **Data:** Junho de 2026
 > **Grupo 1:**
-> - Henrique Vieira Monteiro — RA 20045324 (Agente A)
-> - Gabriel Teixeira Costa — RA 20123097 (Agente B)
+> - Henrique Vieira Monteiro — RA 20045324 (Agente A — núcleo de domínio + arquitetura + dashboards + UI)
+> - Gabriel Teixeira Costa — RA 20123097 (Agente B — auth/RLS + webhooks + notifications + sprints + timetracking + import + search)
 
 ---
 
