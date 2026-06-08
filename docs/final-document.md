@@ -222,9 +222,27 @@ export interface IssueState {
 
 > *"Subtipos devem ser substituíveis por seus tipos base."* — Barbara Liskov
 
-`WebhookSigner` (Agente B, B3) terá implementações `HmacSha256Signer`, `HmacSha1Signer`, `Ed25519Signer`. Todas implementam o mesmo contrato (`sign(payload, secret): string`) e são substituíveis sem que callers percebam diferença.
+`WebhookSigner` (Agente B, B3) tem implementações `HmacSha256Signer`, `HmacSha1Signer` e `Ed25519Signer`. Todas honram o mesmo contrato (`sign(payload, secret): string`) e são substituíveis sem que os callers percebam diferença. O contrato é deliberadamente minimalista — uma propriedade `algo` para introspecção e um único método puro `sign()`:
 
-`[B]` Trecho de código + análise pelo Agente B no stint B3.
+```ts
+// src/modules/webhooks/infrastructure/sign/WebhookSigner.ts
+export interface WebhookSigner {
+  readonly algo: string;
+  // Assina o payload (corpo serializado) com o segredo/chave do endpoint e
+  // devolve a assinatura codificada (o header X-Trackr-Signature do B3 worker).
+  sign(payload: string, secret: string): string;
+}
+```
+
+O ponto central do LSP é que o worker de entrega **não conhece** o algoritmo: ele apenas resolve o signer pela configuração do endpoint e invoca `sign()`. A seleção é encapsulada na função `signerFor`, e o worker usa o resultado de forma opaca — `signerFor(endpoint.signatureAlgo).sign(body, endpoint.secret)`:
+
+```ts
+// src/modules/webhooks/infrastructure/queue/workers/webhook-worker.ts
+const body = JSON.stringify({ event: delivery.eventType, data: delivery.payload });
+const signature = signerFor(endpoint.signatureAlgo).sign(body, endpoint.secret);
+```
+
+**Análise.** Cada implementação preserva o contrato sem fortalecer pré-condições nem enfraquecer pós-condições: todas aceitam qualquer `payload`/`secret` em `string` e devolvem sempre uma `string` de assinatura prefixada (`sha256=`, `sha1=`, `ed25519=`). A `HmacSha256Signer` e a `HmacSha1Signer` diferem apenas no algoritmo de hash interno; a `Ed25519Signer` muda inclusive a semântica do `secret` (passa a ser uma chave privada PEM em vez de um segredo simétrico) e a codificação de saída (base64), mas **isso permanece invisível ao caller** porque o contrato exige só `(string, string) → string`. Justamente por isso qualquer um dos três é um *drop-in*: trocar o algoritmo de um endpoint não toca uma linha do worker. Esse é o LSP em sua forma mais útil — substituibilidade comportamental que torna o caller imune à proliferação de implementações, complementando o OCP da §4.2 (um algoritmo novo é uma classe nova mais um `case` em `signerFor`, sem alterar consumidores).
 
 ### 4.4. ISP — Interface Segregation Principle
 
@@ -246,7 +264,21 @@ export interface OutboxStore extends OutboxWriter, OutboxReader {}
 
 **Efeito:** use cases recebem apenas `OutboxWriter`; o `OutboxRelay` recebe apenas `OutboxReader`. Nenhum cliente é forçado a conhecer métodos que não usa.
 
-`[B]` Complementar com IssueSearcher vs IssueWriter (Agente B B7).
+O mesmo princípio reaparece no módulo de busca (Agente B, B7). A leitura de issues para pesquisa é exposta por uma port read-only — `IssueSearcher` — deliberadamente separada das ports de escrita/repositório do módulo `issues`. Quem só pesquisa depende apenas de um método:
+
+```ts
+// src/modules/search/application/ports/IssueSearcher.ts
+import type { SearchQuery, SearchResult } from "../../domain";
+
+// SOLID: ISP — port read-only de busca, deliberadamente separada das ports de
+// escrita/repositório (IssueWriter/Repository). Quem só pesquisa depende apenas
+// disto; o adapter de FTS implementa só esta operação.
+export interface IssueSearcher {
+  search(query: SearchQuery): Promise<SearchResult>;
+}
+```
+
+**Análise.** A `IssueSearcher` é uma interface de um método só. Um cliente que apenas consulta — o use case de busca, o handler HTTP, o `CachedSearcher` decorador da §6.7 — não é forçado a depender de `save`, `findById`, `listChildren` ou qualquer operação de mutação do repositório de issues. Isso traz três ganhos concretos: (1) o adapter de FTS sobre Postgres (`PostgresFtsSearcher`) implementa **só** `search()`, sem stubs vazios para métodos de escrita que não fazem sentido num motor de busca; (2) o decorador de cache pode embrulhar a port inteira porque ela tem uma superfície mínima e coesa; (3) a fronteira de dependência entre os módulos `search` e `issues` fica nítida — o `search` lê o read-model, não comanda o ciclo de vida das issues. Em conjunto com a separação `OutboxWriter`/`OutboxReader` acima, esses dois exemplos mostram o ISP atuando tanto sobre um adapter de papel duplo (Outbox) quanto sobre a divisão leitura/escrita entre módulos (search vs. issues).
 
 ### 4.5. DIP — Dependency Inversion Principle
 
@@ -379,29 +411,95 @@ export class IssueTree {
 
 **Benefício:** desacoplamento total entre quem muda estado e quem reage. **Custo:** fluxo distribuído é mais difícil de depurar — mitigado por `correlation_id` nos logs.
 
-### 6.5. Strategy (Comportamental) — Agente B `[B]`
+### 6.5. Strategy (Comportamental) — Agente B
 
 **Problema:** políticas de retry de webhook variam por endpoint (Exponential, Linear, Fixed). Ranking de busca varia por contexto.
 
-**Implementação:** `src/modules/webhooks/application/retry/RetryStrategy.ts` (B3), `src/modules/search/application/ranking/RankingStrategy.ts` (B7).
+**Implementação:** o padrão Strategy aparece em **três** pontos independentes do trabalho do Agente B, sempre com a mesma forma: uma interface de estratégia + estratégias concretas intercambiáveis + uma função seletora exaustiva que mapeia um *dado* de configuração para o *comportamento*.
 
-`[B]` Trecho + análise pelo Agente B.
+1. `src/modules/webhooks/application/retry/RetryStrategy.ts` (B3) — `ExponentialRetry`, `LinearRetry`, `FixedRetry`, selecionadas por `retryStrategyFor(policy)`.
+2. `src/modules/search/application/ranking/RankingStrategy.ts` (B7) — `RelevanceRanking`, `DateRanking`, `PriorityRanking`, selecionadas por `rankingFor(key)`.
+3. `src/modules/import/application/parsers/Parser.ts` (B8) — `CsvParser`, `JsonParser`, selecionadas por `parserFor(format)`.
 
-### 6.6. Factory Method (Criação) — Agente B `[B]`
+O exemplo abaixo mostra a interface de ranking e a função seletora correspondente:
+
+```ts
+// src/modules/search/application/ranking/RankingStrategy.ts
+export interface RankingStrategy {
+  readonly key: RankingKey;
+  sort(hits: SearchHit[]): SearchHit[]; // PURO: retorna novo array, nunca muta
+}
+
+// src/modules/search/application/ranking/index.ts
+export function rankingFor(key: RankingKey): RankingStrategy {
+  switch (key) {
+    case "relevance": return new RelevanceRanking();
+    case "date":      return new DateRanking();
+    case "priority":  return new PriorityRanking();
+  }
+}
+```
+
+**Análise.** Os três casos resolvem problemas distintos — backoff de retry, ordenação de resultados, parsing de formatos de importação — mas compartilham a mesma estrutura GoF: o caller depende apenas da abstração (`RetryStrategy`, `RankingStrategy`, `Parser`) e a estratégia concreta é resolvida em runtime a partir de um dado configurável (a `RetryPolicy` do endpoint, a `RankingKey` da query, o `ParseFormat` do upload). Isso liga o Strategy diretamente ao OCP da §4.2: cada `switch` seletor é **exaustivo** sobre uma *union* de TypeScript, de modo que acrescentar uma estratégia nova é criar uma classe e um `case` — o compilador acusa o `case` faltante, e nenhum caller existente muda. A escolha do Strategy em vez de condicionais espalhadas pelos callers evita o anti-padrão de `if (policy === "exponential") … else if …` duplicado no worker, no scheduler e nos testes; a lógica de cada algoritmo fica isolada, testável em separado (cada estratégia tem seu `*.test.ts`) e reutilizável. O custo é o de sempre no Strategy: mais arquivos pequenos e uma indireção a mais — aceito, dado o ganho de extensibilidade e a cobertura de teste granular.
+
+### 6.6. Factory Method (Criação) — Agente B
 
 **Problema:** `Notification` tem subtipos por canal (Email, Push, InApp, Webhook) com payloads diferentes.
 
-**Implementação:** `src/modules/notifications/application/NotificationFactory.ts` (B4).
+**Implementação:** `src/modules/notifications/application/NotificationFactory.ts` (B4). Um Creator abstrato declara o factory method `create`; cada Creator concreto fabrica o `Notification` do seu canal:
 
-`[B]` Trecho + análise pelo Agente B.
+```ts
+// src/modules/notifications/application/NotificationFactory.ts
+export abstract class NotificationFactory {
+  abstract create(payload: NotificationPayload): Notification;
+}
 
-### 6.7. Decorator (Estrutural) — Agente B `[B]`
+export class EmailNotificationFactory extends NotificationFactory {
+  create(payload: NotificationPayload): Notification {
+    return new EmailNotification(payload);
+  }
+}
+// PushNotificationFactory, InAppNotificationFactory, WebhookNotificationFactory: idem
+
+export function notificationFactoryFor(channel: Channel): NotificationFactory {
+  switch (channel) {
+    case "email":   return new EmailNotificationFactory();
+    case "push":    return new PushNotificationFactory();
+    case "in_app":  return new InAppNotificationFactory();
+    case "webhook": return new WebhookNotificationFactory();
+  }
+}
+```
+
+**Análise.** Este é o Factory Method canônico do GoF: a classe-base `NotificationFactory` define o método-fábrica abstrato `create`, e cada subclasse concreta decide qual Product instanciar — `EmailNotification`, `PushNotification`, `InAppNotification` ou `WebhookNotification` — sem que o cliente conheça o construtor concreto. O cliente trabalha sobre o tipo `Notification` (o Product abstrato) e delega a instanciação ao Creator, o que mantém o ponto de criação único e localizado. Vale a distinção em relação ao Strategy da §6.5: lá as funções `xxxFor` selecionam um *algoritmo* (comportamento) já implementado; aqui a hierarquia de `NotificationFactory` existe para **construir** objetos por canal, com payloads diferentes. A função `notificationFactoryFor` apenas resolve o Creator concreto a partir do `Channel`, novamente com `switch` exaustivo sobre a union — então adicionar um canal (por exemplo SMS) é criar um par Product+Creator e um `case`, sem tocar nos callers (SOLID: OCP). O benefício prático é que o use case `SendNotification` permanece agnóstico ao canal; o custo é a clássica explosão de classes paralelas (um Creator por Product), aceitável dado o número pequeno e estável de canais.
+
+### 6.7. Decorator (Estrutural) — Agente B
 
 **Problema:** Cache de busca precisa ser opcional e composável sobre o searcher real.
 
-**Implementação:** `src/modules/search/infrastructure/CachedSearcher.ts` (B7).
+**Implementação:** `src/modules/search/infrastructure/CachedSearcher.ts` (B7). O `CachedSearcher` implementa a mesma port `IssueSearcher` e embrulha um `inner` searcher, interpondo uma camada de cache:
 
-`[B]` Trecho + análise pelo Agente B.
+```ts
+// src/modules/search/infrastructure/CachedSearcher.ts
+export class CachedSearcher implements IssueSearcher {
+  constructor(
+    private readonly inner: IssueSearcher,
+    private readonly cache: Cache,
+    private readonly ttlSeconds: number,
+  ) {}
+
+  async search(query: SearchQuery): Promise<SearchResult> {
+    const key = cacheKey(query);
+    const cached = await this.cache.get<SearchResult>(key);
+    if (cached !== null) return cached;            // cache hit
+    const result = await this.inner.search(query); // miss -> delega ao inner
+    await this.cache.set(key, result, this.ttlSeconds);
+    return result;
+  }
+}
+```
+
+**Análise.** O Decorator adiciona responsabilidade (caching) a um objeto **transparentemente**: como o `CachedSearcher` implementa `IssueSearcher` e recebe outro `IssueSearcher` por composição, ele é indistinguível do searcher real do ponto de vista do caller, que continua dependendo só da port. O componente embrulhado — o `PostgresFtsSearcher` — não sabe que está sendo decorado, e a decisão de cachear ou não é tomada no composition root: em `createSearchModule`, o searcher de FTS só é embrulhado quando há um `Cache` disponível (`deps.cache ? new CachedSearcher(base, …) : base`). Isso é a vantagem central do Decorator sobre herança: o comportamento extra é **composável e opcional** em runtime, sem subclasses do searcher concreto e sem condicionais de cache vazando para dentro do FTS. A função `cacheKey` normaliza a query (campos em ordem fixa, defaults explícitos) para que consultas equivalentes colidam na mesma chave, sustentando o atributo de Performance Efficiency da §2A.3 (hit rate de cache ≥70%). O custo é a indireção extra por chamada e a necessidade de invalidação/TTL coerente — mitigado pelo `ttlSeconds` configurável e por chaves determinísticas.
 
 ---
 
@@ -443,7 +541,31 @@ Arquivo: [`openapi/trackr.json`](../openapi/trackr.json). Gerado por `npm run op
 | GET | `/api/v1/issues/{issueId}/activity` | Timeline de mudanças (Memento snapshots, newest first) |
 | GET / POST | `/api/v1/projects/{projectId}/labels` | Listar / criar label |
 
-`[B]` Endpoints do Agente B (webhooks, notifications, sprints, search, reports): preencher após B11.
+### 7.6. Capacidades dos módulos do Agente B (webhooks, notifications, sprints, timetracking, search)
+
+Os módulos entregues pelo Agente B (webhooks, notifications, sprints, timetracking, search) foram construídos como **use cases por trás de factories de composição** (`createXxxModule(deps)`), seguindo a mesma Hexagonal/Clean dos módulos do Agente A. Sendo honesto quanto à superfície HTTP: dentre esses módulos, **apenas reports já tem rota REST publicada** sob `/api/v1/projects/{projectId}/reports/*`; os demais expõem suas capacidades como use cases consumidos pela UI cliente (B11) via **server actions** em sessão separada. As tabelas abaixo documentam o que cada módulo expõe (sua factory + use cases), sem inventar endpoints que não existem.
+
+**Endpoints REST efetivamente publicados (módulo reports, B10):**
+
+| Método | Path | Descrição |
+|--------|------|-----------|
+| GET | `/api/v1/projects/{projectId}/reports/throughput` | Throughput (issues concluídas por período) |
+| GET | `/api/v1/projects/{projectId}/reports/cycle-time` | Cycle time agregado do projeto |
+| GET | `/api/v1/projects/{projectId}/reports/status-distribution` | Distribuição de issues por status |
+
+**Capacidades expostas como use cases (factory por módulo, consumo via server actions em B11):**
+
+| Módulo (factory) | Use cases / capacidades | Adapter principal |
+|------------------|-------------------------|-------------------|
+| `createWebhooksModule` | `CreateEndpoint`, `ListEndpoints`, `DeleteEndpoint`, `EnqueueDelivery`, `RecordAttempt` | `DrizzleWebhookRepository`, `DeliveryQueue` (BullMQ/InMemory) |
+| `createNotificationsModule` | `SendNotification`, `UpdatePreferences`, `SubscribeUserToTopic`, `registerSubscribers()` (Observer) | `DrizzleNotificationRepository`, mapa de canais |
+| `createSprintsModule` | `CreateSprint`, `StartSprint`, `CloseSprint`, `AddIssueToSprint`, `RemoveIssueFromSprint`, `GetActiveSprint` | `DrizzleSprintRepository` |
+| `createTimetrackingModule` | `LogTime`, `EditEntry`, `DeleteEntry`, `GetUserSummary`, `GetIssueTotal` | `DrizzleTimeEntryRepository` |
+| `createSearchModule` | `searcher.search(query)` (FTS + cache opcional via Decorator) | `PostgresFtsSearcher` (+ `CachedSearcher`) |
+| `createReportsModule` | `GetProjectThroughput`, `GetProjectCycleTime`, `GetProjectStatusDistribution`, `GetSprintVelocity`, `GetSprintBurndown` | `DrizzleReportReader` |
+| `createImportModule` | `ImportIssues`, `DryRunImport` (Strategy de parser CSV/JSON) | sem schema próprio — escreve via port `IssueCreator` |
+
+Cada factory é o composition root do módulo (SOLID: DIP) — liga os adapters Drizzle/queue aos use cases num único lugar, sem singleton global. O contrato de cada use case é um `execute(input): Promise<Result<Output, Error>>`, pronto para ser invocado tanto por um futuro route handler quanto pela server action que a UI cliente (B11) consome. A superfície HTTP/UI dos módulos webhooks, notifications, sprints, timetracking e search é entregue em **B11**; até lá, esses módulos são exercitados pelos seus testes unitários e pela factory diretamente.
 
 ---
 
@@ -636,7 +758,56 @@ O diagrama acima evidencia, em uma só passagem, quatro padrões GoF (State na t
 
 Fonte: [`diagrams/sequence-webhook-delivery.puml`](../diagrams/sequence-webhook-delivery.puml). Mostra o fluxo assíncrono: use case escreve no Outbox em transação → OutboxRelay despacha ao EventBus → WebhookSubscriber enfileira no BullMQ → worker aplica RetryStrategy + WebhookSigner → entrega ao endpoint externo.
 
-`[B]` Agente B finaliza após B3 (worker + Strategy + Signer implementados).
+Versão Mermaid embutida para renderização nativa no GitHub:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant UC as Use case<br/>(ex: TransitionIssue)
+    participant DB as Postgres<br/>(Outbox + tabelas)
+    participant Relay as OutboxRelay
+    participant ED as EnqueueDelivery<br/>use case
+    participant Q as DeliveryQueue<br/>(BullMQ / Upstash)
+    participant W as webhook-worker
+    participant Sign as signerFor(algo)<br/>(GoF: LSP/Strategy)
+    participant Ext as Endpoint externo<br/>(HTTPS)
+    participant RA as RecordAttempt<br/>use case
+
+    UC->>DB: BEGIN tx: save(aggregate) + outbox.enqueue(event)
+    Note over UC,DB: Outbox Pattern — evento persiste na MESMA transação<br/>(zero perda se Redis cair — ADR-0007)
+    DB-->>UC: COMMIT
+
+    Relay->>DB: fetchUnpublished(limit)
+    DB-->>Relay: OutboxRecord[]
+    Relay->>ED: execute({ endpointId, eventType, payload })
+    ED->>DB: deliveryRepo.save(WebhookDelivery)
+    ED->>Q: enqueue(delivery)
+    Relay->>DB: markPublished(ids, now)
+
+    Q->>W: job { deliveryId }
+    W->>DB: findById(delivery) + findById(endpoint)
+    DB-->>W: delivery, endpoint
+    W->>Sign: sign(body, endpoint.secret)
+    Sign-->>W: x-trackr-signature
+    W->>Ext: POST HTTPS { event, data } + assinatura
+    alt 2xx
+        Ext-->>W: 200 OK
+        W->>RA: execute({ deliveryId, statusCode })
+        Note over RA: delivery.status = delivered
+    else falha (timeout / 5xx / 4xx)
+        Ext-->>W: erro / status != 2xx
+        W->>RA: execute({ deliveryId, statusCode, error })
+        RA-->>W: delivery.status = failed
+        Note over W,RA: GoF: Strategy — retryStrategyFor(endpoint.retryPolicy)
+        alt strategy.shouldRetry(attempt)
+            W->>Q: enqueueRetry(delivery, attempt+1,<br/>strategy.nextDelayMs(attempt+1))
+        else maxAttempts atingido
+            Note over W: dead-letter — não re-enfileira
+        end
+    end
+```
+
+O diagrama evidencia, numa só passagem, o **Outbox Pattern** (evento persistido na mesma transação do aggregate, garantindo zero perda — §2A.2 e ADR-0007), o **LSP** na assinatura (`signerFor(algo).sign()` chamado sem o worker conhecer o algoritmo — §4.3) e o **Strategy** no backoff (`retryStrategyFor(policy)` re-enfileirando com `nextDelayMs` ou fazendo *dead-letter* ao atingir `maxAttempts` — §6.5).
 
 ---
 
@@ -657,7 +828,17 @@ A primeira metade do trabalho (stints A1–A12) entregou:
 
 ### 9.2. Avaliação crítica da efetividade das práticas
 
-`[B]` Avaliação completa após B12.
+Com os módulos do Agente B integrados (webhooks, notifications, sprints, timetracking, search, reports, import), é possível avaliar criticamente — e de forma balanceada — a efetividade das práticas adotadas, separando os ganhos reais dos custos pagos.
+
+**Hexagonal/Clean por módulo: o maior acerto, com um imposto de boilerplate.** Repetir a estrutura `domain/application/infrastructure/interface` em cada bounded context provou seu valor justamente na fase B: módulos novos (search, sprints, timetracking) puderam ser escritos, testados e validados isoladamente, sem subir framework nem banco, porque o domínio só depende de ports. O `createSearchModule` ilustra o benefício composicional — embrulhar ou não o `PostgresFtsSearcher` num `CachedSearcher` é uma decisão de uma linha no composition root. O custo é honesto: cada módulo carrega uma camada de ports, DTOs e uma factory de composição que, para use cases simples (por exemplo `GetActiveSprint`, que é quase um *passthrough* para o repositório), beira o overengineering. A relação ports/lógica-de-negócio é alta em módulos finos.
+
+**Result pattern vs. exceptions: corretude às custas de verbosidade.** Padronizar `Result<T, DomainError>` em todos os use cases (em vez de `throw`) força o tratamento explícito de cada erro previsível e elimina a classe de bugs de propagação esquecida — o `EnqueueDelivery`, por exemplo, encadeia `if (!created.ok) return created` em vez de confiar em try/catch distante. O preço é uma API mais cerimoniosa: cada chamada exige checagem de `.ok` antes de acessar `.value`, e os tipos de erro de cada use case (`CreateEndpointError`, `EnqueueDeliveryError`, …) multiplicam-se. É um trade-off favorável para um domínio que valoriza Reliability, mas inegavelmente mais verboso que exceptions.
+
+**SOLID e os 7 padrões GoF: coerentes, não cosméticos — porém com risco de padrão por padrão.** Os princípios e padrões aqui resolvem problemas reais e se reforçam mutuamente: o Strategy (retry, ranking, parsers) é a materialização do OCP; o LSP dos signers torna o worker imune ao algoritmo; o Decorator de cache e o Factory Method de notificações isolam, respectivamente, *cross-cutting concern* e construção por canal. A repetição da forma "interface + concretas + seletor exaustivo sobre union" nos três Strategies é uma vantagem de consistência, mas também sinaliza um risco: a tentação de aplicar o mesmo molde mesmo quando um par de funções bastaria. A disciplina de só introduzir um padrão diante de um eixo de variação concreto (e não para preencher checklist) foi mantida, mas é um equilíbrio que exige vigilância.
+
+**DI por factory: explícita e testável, ao custo de duplicação de wiring.** Resolver a injeção de dependência via `createXxxModule(deps)` em vez de um contêiner de IoC mágico mantém o grafo de dependências legível e sem singletons globais — cada factory mostra, num lugar só, quais adapters alimentam quais use cases. A contrapartida é que o padrão de wiring (`new DrizzleXxxRepository(db)` + `sharedDeps` + instanciação de cada use case) se repete quase idêntico entre módulos; é duplicação estrutural que um contêiner reduziria, à custa de magia e perda de rastreabilidade — uma troca que o trabalho fez conscientemente a favor da clareza.
+
+**Custos honestos e dívidas reconhecidas.** Alguns pontos merecem crítica explícita. (1) **Placeholders de infraestrutura:** o `InMemoryDeliveryQueue` é um adapter-stub até o BullMQ real entrar em produção, e os use cases ainda publicam no `InMemoryEventBus` em vez de gravarem no `OutboxStore` — a integração Outbox→worker está estruturalmente pronta (ports separadas, relay, signer, strategy), mas o *refactor* das use cases para o fluxo transacional completo permanece no backlog (ADR-0007). (2) **Autorização potencialmente duplicada:** a segurança vive tanto nas RLS do Postgres quanto em verificações de domínio nos use cases; essa redundância é defensável como *defense-in-depth*, mas é dívida cognitiva — uma regra de acesso pode precisar mudar em dois lugares. (3) **Testes de integração adiados:** a cobertura forte é unitária (domínio testável via fakes); os adapters Drizzle e a entrega real de webhook sobre Redis ainda dependem de testes de integração com Postgres/Redis reais, planejados mas não concluídos. No saldo, as práticas entregaram o que prometeram — testabilidade via fakes, adapters trocáveis, extensibilidade por padrão — e os custos pagos (boilerplate, verbosidade do Result, wiring duplicado, placeholders) são proporcionais e, em sua maioria, conscientes e documentados.
 
 Observações preliminares do Agente A:
 
@@ -672,7 +853,12 @@ Observações preliminares do Agente A:
 - A UI Next.js cliente entra em B11. Até lá, o sistema é exercitado pela API REST + curl.
 - Não há ainda observabilidade (logs estruturados, traces). Para produção real, adicionar `pino` + correlation_id no middleware.
 
-`[B]` Agente B adiciona suas observações após B12.
+Observações do Agente B (infraestrutura periférica + features):
+
+- **Superfície HTTP/UI pendente:** os módulos do Agente B (webhooks, notifications, sprints, timetracking, search) entregam casos de uso atrás de factories (`createXxxModule`); a exposição via rotas REST/server actions e a UI cliente são fechadas no stint **B11**. Até lá, são exercitados por testes unitários e (com credenciais) integração.
+- **Dependências de serviço externo são plugáveis, não obrigatórias:** o worker BullMQ requer Redis **TCP** (`rediss://`, não o endpoint REST do Upstash); os canais de notificação (Resend/web-push/Realtime) só são registrados quando há credencial — sem ela, `SendNotification` grava status `failed` em vez de quebrar. Isso mantém o núcleo testável sem infraestrutura.
+- **RLS como defesa em profundidade:** as policies impõem o isolamento multi-tenant no banco, mas o caminho user-scoped efetivo (transação injetando o JWT + `set role authenticated`) depende do cliente Drizzle base; está documentado no ADR-0004 e fica como próximo passo de fiação.
+- **Testes de adapter:** os repositórios Drizzle têm testes de integração que **pulam** sem `DATABASE_URL`; o fluxo crítico E2E (Playwright) exige a aplicação rodando + browsers instalados. Ambos são scaffolding pronto, executável quando a infra de CI estiver disponível.
 
 ---
 
@@ -708,7 +894,19 @@ Observações preliminares do Agente A:
 
 - OpenAPI Initiative. **OpenAPI Specification v3.1.0**. 2021. Disponível em: <https://spec.openapis.org/oas/v3.1.0>.
 
-`[B]` Agente B adiciona referências específicas de suas seções (Strategy/Factory/Decorator, Supabase Auth, BullMQ).
+Referências específicas das seções do Agente B (Auth/RLS, filas, busca, padrões):
+
+- SUPABASE. **Server-Side Auth for Next.js** e **Row Level Security**. Disponível em: <https://supabase.com/docs/guides/auth/server-side/nextjs> e <https://supabase.com/docs/guides/database/postgres/row-level-security>. Acesso em: jun. 2026.
+
+- TASKFORCE (BullMQ). **BullMQ — Premium Message Queue for NodeJS**. Disponível em: <https://docs.bullmq.io>. Acesso em: jun. 2026.
+
+- UPSTASH. **Upstash Redis Documentation**. Disponível em: <https://upstash.com/docs/redis>. Acesso em: jun. 2026.
+
+- POSTGRESQL GLOBAL DEVELOPMENT GROUP. **PostgreSQL Documentation — Chapter 12: Full Text Search** (`tsvector`, `tsquery`, `ts_rank`, índices GIN). Disponível em: <https://www.postgresql.org/docs/current/textsearch.html>. Acesso em: jun. 2026.
+
+- RESEND. **Resend Documentation**. Disponível em: <https://resend.com/docs>. Acesso em: jun. 2026.
+
+- MOZILLA DEVELOPER NETWORK. **Web Push API / VAPID**. Disponível em: <https://developer.mozilla.org/en-US/docs/Web/API/Push_API>. Acesso em: jun. 2026.
 
 ---
 
