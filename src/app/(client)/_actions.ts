@@ -10,6 +10,7 @@ import { SignIn, SignOut, SignUp } from "@/modules/auth-rls/application";
 import { ISSUE_PRIORITIES, type IssuePriority } from "@/modules/issues/domain/IssuePriority";
 import { ISSUE_STATUSES, type IssueStatus } from "@/modules/issues/domain/IssueStatus";
 import { requireAppUser, resolveProjectEntity, resolveWorkspaceEntity } from "@/app/(client)/_data";
+import { ensureUserMirror } from "@/app/(client)/_user-mirror";
 
 export async function signInAction(formData: FormData): Promise<void> {
   const email = String(formData.get("email") ?? "");
@@ -41,7 +42,10 @@ export async function registerAction(formData: FormData): Promise<void> {
     redirect("/register?error=signup-failed");
   }
 
-  const workspaceResult = await container().workspaces.createWorkspace.execute({
+  const app = container();
+  await ensureUserMirror(app.db, authResult.value);
+
+  const workspaceResult = await app.workspaces.createWorkspace.execute({
     name: workspaceName,
     slug,
     ownerId: authResult.value.id.value,
