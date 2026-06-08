@@ -516,6 +516,49 @@ classDiagram
 
 Fonte: [`diagrams/sequence-issue-transition.puml`](../diagrams/sequence-issue-transition.puml). Mostra o fluxo end-to-end de `POST /api/v1/issues/{id}/transitions`: auth → validação Zod → use case → state machine → repo → eventos → resposta (sucesso ou Problem Details).
 
+Versão Mermaid embutida para renderização nativa no GitHub:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant U as User<br/>(Dev/PM)
+    participant H as Next.js<br/>route handler
+    participant Auth as requireAuth
+    participant UC as TransitionIssue<br/>use case
+    participant Repo as IssueRepository
+    participant Issue as Issue<br/>entity
+    participant SM as IssueStateMachine<br/>(GoF: State)
+    participant ActR as ActivityRepository<br/>(ADR-0009)
+    participant Bus as EventBus<br/>(GoF: Observer)
+
+    U->>H: POST /transitions { to: in_progress }<br/>Bearer JWT
+    H->>Auth: requireAuth(request)
+    Auth-->>H: { ok, user }
+    H->>UC: execute({ actorId, issueId, to })
+    UC->>Repo: findById(issueId)
+    Repo-->>UC: Issue
+    UC->>Issue: transitionTo(to, now)
+    Issue->>SM: transition(from, to, { approverId })
+    alt allowed
+        SM-->>Issue: Ok(status)
+        Issue-->>UC: Ok(newIssue)
+        UC->>Repo: save(newIssue)
+        UC->>ActR: save(ActivitySnapshot.capture(before, after))
+        Note over ActR: GoF: Memento
+        UC->>Bus: publish(IssueTransitioned)
+        Note right of Bus: subscribers: webhooks (B3),<br/>notifications (B5),<br/>realtime (B5)
+        UC-->>H: Ok(issue)
+        H-->>U: 200 { issue }
+    else rejected
+        SM-->>Issue: Err(InvalidTransitionError)
+        Issue-->>UC: Err
+        UC-->>H: Err
+        H-->>U: 422 application/problem+json
+    end
+```
+
+O diagrama acima evidencia, em uma só passagem, quatro padrões GoF (State na transição, Memento na captura, Observer no EventBus, Adapter implícito no Repository) e o atributo Reliability via Activity Log + ADR-0009.
+
 ### 8.5. Diagrama de sequência — Entrega de webhook (Outbox)
 
 Fonte: [`diagrams/sequence-webhook-delivery.puml`](../diagrams/sequence-webhook-delivery.puml). Mostra o fluxo assíncrono: use case escreve no Outbox em transação → OutboxRelay despacha ao EventBus → WebhookSubscriber enfileira no BullMQ → worker aplica RetryStrategy + WebhookSigner → entrega ao endpoint externo.
