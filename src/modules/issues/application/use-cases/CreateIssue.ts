@@ -12,10 +12,12 @@ import {
 import {
   Issue,
   ISSUE_CREATED,
+  ActivitySnapshot,
   type IssueCreatedEvent,
   type IssuePriority,
 } from "../../domain";
 import type { IssueRepository } from "../ports/IssueRepository";
+import type { ActivityRepository } from "../ports/ActivityRepository";
 import type { ProjectRepository } from "@/modules/projects/application/ports/ProjectRepository";
 
 export interface CreateIssueInput {
@@ -36,6 +38,7 @@ export type CreateIssueError = NotFoundError | ValidationError;
 
 export interface CreateIssueDeps {
   issueRepo: IssueRepository;
+  activityRepo: ActivityRepository;
   projectRepo: ProjectRepository;
   clock: Clock;
   ids: IdGenerator;
@@ -48,7 +51,7 @@ export class CreateIssue {
   async execute(
     input: CreateIssueInput,
   ): Promise<Result<CreateIssueOutput, CreateIssueError>> {
-    const { issueRepo, projectRepo, clock, ids, events } = this.deps;
+    const { issueRepo, activityRepo, projectRepo, clock, ids, events } = this.deps;
 
     const project = await projectRepo.findById(input.projectId);
     if (!project) return err(new NotFoundError("Project", input.projectId));
@@ -89,6 +92,18 @@ export class CreateIssue {
     if (!issueResult.ok) return issueResult;
 
     await issueRepo.save(issueResult.value);
+
+    // GoF: Memento — captura snapshot pós-criação no Activity Log (before=null
+    // pois é o primeiro estado conhecido).
+    const snapshot = ActivitySnapshot.capture({
+      id: ids.generate(ID_PREFIXES.activity),
+      actorId: input.actorId,
+      action: "created",
+      before: null,
+      after: issueResult.value,
+      at: now,
+    });
+    await activityRepo.save(snapshot);
 
     const event: IssueCreatedEvent = {
       id: ids.generate("evt"),

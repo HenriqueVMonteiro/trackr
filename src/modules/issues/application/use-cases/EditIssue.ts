@@ -5,15 +5,18 @@ import {
   type Clock,
   type IdGenerator,
   type EventBus,
+  ID_PREFIXES,
   NotFoundError,
   type ValidationError,
 } from "@/shared";
 import {
   type Issue,
   ISSUE_EDITED,
+  ActivitySnapshot,
   type IssueEditedEvent,
 } from "../../domain";
 import type { IssueRepository } from "../ports/IssueRepository";
+import type { ActivityRepository } from "../ports/ActivityRepository";
 
 export interface EditIssueInput {
   actorId: string;
@@ -26,6 +29,7 @@ export type EditIssueError = NotFoundError | ValidationError;
 
 export interface EditIssueDeps {
   repo: IssueRepository;
+  activityRepo: ActivityRepository;
   clock: Clock;
   ids: IdGenerator;
   events: EventBus;
@@ -35,7 +39,7 @@ export class EditIssue {
   constructor(private readonly deps: EditIssueDeps) {}
 
   async execute(input: EditIssueInput): Promise<Result<Issue, EditIssueError>> {
-    const { repo, clock, ids, events } = this.deps;
+    const { repo, activityRepo, clock, ids, events } = this.deps;
     const issue = await repo.findById(input.issueId);
     if (!issue) return err(new NotFoundError("Issue", input.issueId));
 
@@ -49,6 +53,16 @@ export class EditIssue {
     if (edited.value === issue) return ok(issue);
 
     await repo.save(edited.value);
+
+    const snapshot = ActivitySnapshot.capture({
+      id: ids.generate(ID_PREFIXES.activity),
+      actorId: input.actorId,
+      action: "edited",
+      before: issue,
+      after: edited.value,
+      at: now,
+    });
+    await activityRepo.save(snapshot);
 
     const changedFields: Array<"title" | "description"> = [];
     if (input.title !== undefined && input.title !== issue.title) changedFields.push("title");

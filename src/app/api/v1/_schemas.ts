@@ -104,6 +104,21 @@ export const LabelResource = z
   })
   .openapi("Label");
 
+export const ActivityResource = z
+  .object({
+    id: z.string(),
+    issueId: z.string(),
+    actorId: z.string().uuid(),
+    action: z.string(),
+    before: z.record(z.unknown()).nullable(),
+    after: z.record(z.unknown()),
+    diff: z.object({
+      fields: z.record(z.object({ from: z.unknown(), to: z.unknown() })),
+    }),
+    createdAt: z.string().datetime(),
+  })
+  .openapi("Activity");
+
 // ---------- request bodies
 export const CreateWorkspaceBody = z
   .object({
@@ -193,8 +208,15 @@ export const LabelListEnvelope = z
   })
   .openapi("LabelList");
 
+export const ActivityListEnvelope = z
+  .object({
+    items: z.array(ActivityResource),
+  })
+  .openapi("ActivityList");
+
 export type WorkspaceDTO = z.infer<typeof WorkspaceResource>;
 export type ProjectDTO = z.infer<typeof ProjectResource>;
 export type IssueDTO = z.infer<typeof IssueResource>;
 export type CommentDTO = z.infer<typeof CommentResource>;
 export type LabelDTO = z.infer<typeof LabelResource>;
+export type ActivityDTO = z.infer<typeof ActivityResource>;

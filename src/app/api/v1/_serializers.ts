@@ -1,6 +1,7 @@
 import type { Workspace } from "@/modules/workspaces";
 import type { Project } from "@/modules/projects";
 import type { Issue } from "@/modules/issues";
+import type { ActivitySnapshot } from "@/modules/issues/domain/ActivitySnapshot";
 import type { Comment } from "@/modules/comments";
 import type { Label } from "@/modules/labels";
 import type {
@@ -9,6 +10,7 @@ import type {
   IssueDTO,
   CommentDTO,
   LabelDTO,
+  ActivityDTO,
 } from "./_schemas";
 
 // Entity -> wire DTO. Keeps Date serialization (ISO 8601 strings) in one place.
@@ -76,5 +78,18 @@ export function serializeLabel(l: Label): LabelDTO {
     name: l.name,
     color: l.color,
     createdAt: l.createdAt.toISOString(),
+  };
+}
+
+export function serializeActivity(a: ActivitySnapshot): ActivityDTO {
+  return {
+    id: a.id,
+    issueId: a.issueId,
+    actorId: a.actorId,
+    action: a.action,
+    before: a.before as Record<string, unknown> | null,
+    after: a.after as Record<string, unknown>,
+    diff: a.diff as { fields: Record<string, { from: unknown; to: unknown }> },
+    createdAt: a.createdAt.toISOString(),
   };
 }

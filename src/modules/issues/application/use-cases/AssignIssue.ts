@@ -5,14 +5,17 @@ import {
   type Clock,
   type IdGenerator,
   type EventBus,
+  ID_PREFIXES,
   NotFoundError,
 } from "@/shared";
 import {
   type Issue,
   ISSUE_ASSIGNED,
+  ActivitySnapshot,
   type IssueAssignedEvent,
 } from "../../domain";
 import type { IssueRepository } from "../ports/IssueRepository";
+import type { ActivityRepository } from "../ports/ActivityRepository";
 
 export interface AssignIssueInput {
   actorId: string;
@@ -22,6 +25,7 @@ export interface AssignIssueInput {
 
 export interface AssignIssueDeps {
   repo: IssueRepository;
+  activityRepo: ActivityRepository;
   clock: Clock;
   ids: IdGenerator;
   events: EventBus;
@@ -31,7 +35,7 @@ export class AssignIssue {
   constructor(private readonly deps: AssignIssueDeps) {}
 
   async execute(input: AssignIssueInput): Promise<Result<Issue, NotFoundError>> {
-    const { repo, clock, ids, events } = this.deps;
+    const { repo, activityRepo, clock, ids, events } = this.deps;
     const issue = await repo.findById(input.issueId);
     if (!issue) return err(new NotFoundError("Issue", input.issueId));
 
@@ -41,6 +45,16 @@ export class AssignIssue {
     if (updated === issue) return ok(issue);
 
     await repo.save(updated);
+
+    const snapshot = ActivitySnapshot.capture({
+      id: ids.generate(ID_PREFIXES.activity),
+      actorId: input.actorId,
+      action: "assigned",
+      before: issue,
+      after: updated,
+      at: now,
+    });
+    await activityRepo.save(snapshot);
 
     const event: IssueAssignedEvent = {
       id: ids.generate("evt"),

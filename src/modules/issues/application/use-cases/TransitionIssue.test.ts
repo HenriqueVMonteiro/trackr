@@ -2,7 +2,9 @@ import { describe, it, expect } from "vitest";
 import { TransitionIssue } from "./TransitionIssue";
 import { FrozenClock, SequentialIdGenerator, InMemoryEventBus } from "@/shared";
 import type { IssueRepository } from "../ports/IssueRepository";
+import type { ActivityRepository } from "../ports/ActivityRepository";
 import { Issue, type IssueProps } from "../../domain";
+import type { ActivitySnapshot } from "../../domain/ActivitySnapshot";
 import { unwrap } from "@/shared/result";
 
 const makeIssue = (overrides: Partial<IssueProps> = {}) =>
@@ -54,36 +56,64 @@ class FakeRepo implements IssueRepository {
   }
 }
 
+class FakeActivityRepo implements ActivityRepository {
+  saved: ActivitySnapshot[] = [];
+  async save(s: ActivitySnapshot): Promise<void> {
+    this.saved.push(s);
+  }
+  async listByIssue(): Promise<ActivitySnapshot[]> {
+    return [...this.saved];
+  }
+}
+
 describe("TransitionIssue", () => {
   const actorId = "00000000-0000-0000-0000-000000000099";
 
   const setup = (issue: Issue | null) => {
     const repo = new FakeRepo();
+    const activityRepo = new FakeActivityRepo();
     repo.byId = issue;
+    const events = new InMemoryEventBus();
     const useCase = new TransitionIssue({
       repo,
+      activityRepo,
       clock: new FrozenClock("2026-06-07T11:00:00Z"),
       ids: new SequentialIdGenerator(),
-      events: new InMemoryEventBus(),
+      events,
     });
-    return { repo, useCase, events: (useCase as unknown as { deps: { events: InMemoryEventBus } }).deps.events };
+    return { repo, activityRepo, useCase, events };
   };
 
   it("backlog -> todo: persists and publishes event", async () => {
     const issue = makeIssue();
-    const { useCase, repo } = setup(issue);
+    const { useCase, repo, events } = setup(issue);
     const subjects: unknown[] = [];
-    (useCase as unknown as { deps: { events: InMemoryEventBus } }).deps.events.subscribe(
-      "issue.transitioned",
-      async (e) => {
-        subjects.push(e);
-      },
-    );
+    events.subscribe("issue.transitioned", async (e) => {
+      subjects.push(e);
+    });
     const r = await useCase.execute({ actorId, issueId: "iss_001", to: "todo" });
     expect(r.ok).toBe(true);
     if (r.ok) expect(r.value.status).toBe("todo");
     expect(repo.saved).toHaveLength(1);
     expect(subjects).toHaveLength(1);
+  });
+
+  it("persists a Memento snapshot with the status diff", async () => {
+    const issue = makeIssue();
+    const { useCase, activityRepo } = setup(issue);
+    await useCase.execute({ actorId, issueId: "iss_001", to: "todo" });
+    expect(activityRepo.saved).toHaveLength(1);
+    const snap = activityRepo.saved[0];
+    expect(snap?.action).toBe("transitioned");
+    expect(snap?.diff.fields["status"]).toEqual({ from: "backlog", to: "todo" });
+  });
+
+  it("does NOT persist a snapshot when the transition is rejected", async () => {
+    const issue = makeIssue({ status: "backlog" });
+    const { useCase, activityRepo } = setup(issue);
+    const r = await useCase.execute({ actorId, issueId: "iss_001", to: "done" });
+    expect(r.ok).toBe(false);
+    expect(activityRepo.saved).toHaveLength(0);
   });
 
   it("rejects invalid transition with InvalidTransitionError", async () => {

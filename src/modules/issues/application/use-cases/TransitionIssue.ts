@@ -5,6 +5,7 @@ import {
   type Clock,
   type IdGenerator,
   type EventBus,
+  ID_PREFIXES,
   NotFoundError,
   type InvalidTransitionError,
 } from "@/shared";
@@ -12,9 +13,11 @@ import {
   type Issue,
   type IssueStatus,
   ISSUE_TRANSITIONED,
+  ActivitySnapshot,
   type IssueTransitionedEvent,
 } from "../../domain";
 import type { IssueRepository } from "../ports/IssueRepository";
+import type { ActivityRepository } from "../ports/ActivityRepository";
 
 export interface TransitionIssueInput {
   actorId: string;
@@ -26,6 +29,7 @@ export type TransitionIssueError = NotFoundError | InvalidTransitionError;
 
 export interface TransitionIssueDeps {
   repo: IssueRepository;
+  activityRepo: ActivityRepository;
   clock: Clock;
   ids: IdGenerator;
   events: EventBus;
@@ -35,7 +39,7 @@ export class TransitionIssue {
   constructor(private readonly deps: TransitionIssueDeps) {}
 
   async execute(input: TransitionIssueInput): Promise<Result<Issue, TransitionIssueError>> {
-    const { repo, clock, ids, events } = this.deps;
+    const { repo, activityRepo, clock, ids, events } = this.deps;
 
     const issue = await repo.findById(input.issueId);
     if (!issue) return err(new NotFoundError("Issue", input.issueId));
@@ -51,6 +55,17 @@ export class TransitionIssue {
     }
 
     await repo.save(transitioned.value);
+
+    // GoF: Memento — captura estado antes/depois para Activity Log.
+    const snapshot = ActivitySnapshot.capture({
+      id: ids.generate(ID_PREFIXES.activity),
+      actorId: input.actorId,
+      action: "transitioned",
+      before: issue,
+      after: transitioned.value,
+      at: now,
+    });
+    await activityRepo.save(snapshot);
 
     const event: IssueTransitionedEvent = {
       id: ids.generate("evt"),

@@ -1,6 +1,7 @@
 import type { Clock, IdGenerator, EventBus } from "@/shared";
 import type { Database } from "@/infrastructure/db/client";
 import { DrizzleIssueRepository } from "./infrastructure/DrizzleIssueRepository";
+import { DrizzleActivityRepository } from "./infrastructure/DrizzleActivityRepository";
 import {
   CreateIssue,
   GetIssue,
@@ -9,13 +10,16 @@ import {
   EditIssue,
   SetPriority,
   ListIssuesForProject,
+  ListActivityForIssue,
   type IssueRepository,
+  type ActivityRepository,
 } from "./application";
 import type { ProjectRepository } from "@/modules/projects/application/ports/ProjectRepository";
 
 export type * from "./domain";
 export type {
   IssueRepository,
+  ActivityRepository,
   IssueFilter,
   PageQuery,
   PageResult,
@@ -30,6 +34,7 @@ export type {
   EditIssueError,
   SetPriorityInput,
   ListIssuesForProjectInput,
+  ListActivityForIssueInput,
 } from "./application";
 
 export interface IssuesModuleDeps {
@@ -48,13 +53,17 @@ export interface IssuesModule {
   editIssue: EditIssue;
   setPriority: SetPriority;
   listIssuesForProject: ListIssuesForProject;
+  listActivityForIssue: ListActivityForIssue;
   repository: IssueRepository;
+  activityRepository: ActivityRepository;
 }
 
 export function createIssuesModule(deps: IssuesModuleDeps): IssuesModule {
   const repository = new DrizzleIssueRepository(deps.db);
+  const activityRepository = new DrizzleActivityRepository(deps.db);
   const sharedDeps = {
     repo: repository,
+    activityRepo: activityRepository,
     clock: deps.clock,
     ids: deps.ids,
     events: deps.events,
@@ -62,6 +71,7 @@ export function createIssuesModule(deps: IssuesModuleDeps): IssuesModule {
   return {
     createIssue: new CreateIssue({
       issueRepo: repository,
+      activityRepo: activityRepository,
       projectRepo: deps.projectRepo,
       clock: deps.clock,
       ids: deps.ids,
@@ -73,6 +83,8 @@ export function createIssuesModule(deps: IssuesModuleDeps): IssuesModule {
     editIssue: new EditIssue(sharedDeps),
     setPriority: new SetPriority(sharedDeps),
     listIssuesForProject: new ListIssuesForProject(repository),
+    listActivityForIssue: new ListActivityForIssue(activityRepository),
     repository,
+    activityRepository,
   };
 }

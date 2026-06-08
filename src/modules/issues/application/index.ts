@@ -1,4 +1,5 @@
 export type { IssueRepository } from "./ports/IssueRepository";
+export type { ActivityRepository } from "./ports/ActivityRepository";
 export type { IssueFilter, PageQuery, PageResult } from "./dto";
 
 export {
@@ -35,3 +36,7 @@ export {
   ListIssuesForProject,
   type ListIssuesForProjectInput,
 } from "./use-cases/ListIssuesForProject";
+export {
+  ListActivityForIssue,
+  type ListActivityForIssueInput,
+} from "./use-cases/ListActivityForIssue";

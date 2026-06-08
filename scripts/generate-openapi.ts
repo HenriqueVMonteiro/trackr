@@ -8,6 +8,7 @@ import {
   IssueResource,
   CommentResource,
   LabelResource,
+  ActivityResource,
   CreateWorkspaceBody,
   CreateProjectBody,
   CreateIssueBody,
@@ -20,6 +21,7 @@ import {
   IssueListEnvelope,
   CommentListEnvelope,
   LabelListEnvelope,
+  ActivityListEnvelope,
   ProblemSchema,
   Cursor,
   Limit,
@@ -34,6 +36,7 @@ registry.register("Project", ProjectResource);
 registry.register("Issue", IssueResource);
 registry.register("Comment", CommentResource);
 registry.register("Label", LabelResource);
+registry.register("Activity", ActivityResource);
 registry.register("CreateWorkspaceBody", CreateWorkspaceBody);
 registry.register("CreateProjectBody", CreateProjectBody);
 registry.register("CreateIssueBody", CreateIssueBody);
@@ -294,6 +297,26 @@ registry.registerPath({
     401: problemResponse,
     404: problemResponse,
     422: problemResponse,
+  },
+});
+
+// ---------- activity
+registry.registerPath({
+  method: "get",
+  path: "/api/v1/issues/{issueId}/activity",
+  summary: "List activity log entries for an issue (Memento snapshots, newest first)",
+  tags: ["issues", "activity"],
+  security: [{ [bearer.name]: [] }],
+  request: {
+    params: z.object({ issueId: z.string() }),
+    query: z.object({ limit: Limit }),
+  },
+  responses: {
+    200: {
+      description: "Activity entries",
+      content: { "application/json": { schema: ActivityListEnvelope } },
+    },
+    401: problemResponse,
   },
 });
 

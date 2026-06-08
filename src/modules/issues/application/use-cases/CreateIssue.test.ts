@@ -2,8 +2,10 @@ import { describe, it, expect } from "vitest";
 import { CreateIssue } from "./CreateIssue";
 import { FrozenClock, SequentialIdGenerator, InMemoryEventBus } from "@/shared";
 import type { IssueRepository } from "../ports/IssueRepository";
+import type { ActivityRepository } from "../ports/ActivityRepository";
 import type { ProjectRepository } from "@/modules/projects/application/ports/ProjectRepository";
 import type { Issue } from "../../domain";
+import type { ActivitySnapshot } from "../../domain/ActivitySnapshot";
 import { Project } from "@/modules/projects/domain";
 import { unwrap } from "@/shared/result";
 
@@ -29,6 +31,16 @@ class FakeIssueRepo implements IssueRepository {
   async detachLabel(): Promise<void> {}
   async listLabelIds(): Promise<string[]> {
     return [];
+  }
+}
+
+class FakeActivityRepo implements ActivityRepository {
+  saved: ActivitySnapshot[] = [];
+  async save(s: ActivitySnapshot): Promise<void> {
+    this.saved.push(s);
+  }
+  async listByIssue(): Promise<ActivitySnapshot[]> {
+    return [...this.saved];
   }
 }
 
@@ -76,12 +88,20 @@ describe("CreateIssue", () => {
 
   const setup = (project: Project | null = makeProject()) => {
     const issueRepo = new FakeIssueRepo();
+    const activityRepo = new FakeActivityRepo();
     const projectRepo = new FakeProjectRepo(project);
     const clock = new FrozenClock("2026-06-07T10:00:00Z");
     const ids = new SequentialIdGenerator();
     const events = new InMemoryEventBus();
-    const useCase = new CreateIssue({ issueRepo, projectRepo, clock, ids, events });
-    return { issueRepo, projectRepo, clock, ids, events, useCase };
+    const useCase = new CreateIssue({
+      issueRepo,
+      activityRepo,
+      projectRepo,
+      clock,
+      ids,
+      events,
+    });
+    return { issueRepo, activityRepo, projectRepo, clock, ids, events, useCase };
   };
 
   it("creates an issue with backlog status and allocated number", async () => {
@@ -130,5 +150,15 @@ describe("CreateIssue", () => {
     });
     await useCase.execute({ actorId, projectId: "prj_001", title: "Hello" });
     expect(subjects).toHaveLength(1);
+  });
+
+  it("persists a creation ActivitySnapshot (Memento) with before=null", async () => {
+    const { useCase, activityRepo } = setup();
+    await useCase.execute({ actorId, projectId: "prj_001", title: "Hello" });
+    expect(activityRepo.saved).toHaveLength(1);
+    const snap = activityRepo.saved[0];
+    expect(snap?.action).toBe("created");
+    expect(snap?.before).toBeNull();
+    expect(snap?.isCreation()).toBe(true);
   });
 });
