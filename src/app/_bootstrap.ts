@@ -13,6 +13,11 @@ import { createIssuesModule, type IssuesModule } from "@/modules/issues";
 import { createCommentsModule, type CommentsModule } from "@/modules/comments";
 import { createLabelsModule, type LabelsModule } from "@/modules/labels";
 import { createWebhooksModule, type WebhooksModule } from "@/modules/webhooks";
+import {
+  createNotificationsModule,
+  buildNotificationChannels,
+  type NotificationsModule,
+} from "@/modules/notifications";
 
 // Composition root for the entire application. Route handlers + server
 // actions import container() and get fully-wired modules. Initialized
@@ -30,6 +35,7 @@ export interface AppContainer {
   comments: CommentsModule;
   labels: LabelsModule;
   webhooks: WebhooksModule;
+  notifications: NotificationsModule;
 }
 
 let _container: AppContainer | null = null;
@@ -75,6 +81,17 @@ export function container(): AppContainer {
   // a BullMqDeliveryQueue sobre Redis TCP. Ver ADR-0006.
   const webhooks = createWebhooksModule({ db, clock, ids, events });
 
+  // Notifications: monta os canais a partir do ambiente e registra o subscriber
+  // Observer de issue.assigned (GoF: Observer).
+  const notifications = createNotificationsModule({
+    db,
+    clock,
+    ids,
+    events,
+    channels: buildNotificationChannels(),
+  });
+  notifications.registerSubscribers();
+
   _container = {
     db,
     clock,
@@ -86,6 +103,7 @@ export function container(): AppContainer {
     comments,
     labels,
     webhooks,
+    notifications,
   };
   return _container;
 }

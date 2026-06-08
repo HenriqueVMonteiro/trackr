@@ -12,3 +12,4 @@ export * from "./comments";
 export * from "./activity";
 export * from "./outbox";
 export * from "./webhooks";
+export * from "./notifications";
