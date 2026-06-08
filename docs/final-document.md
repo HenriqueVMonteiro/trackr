@@ -102,11 +102,12 @@ Os ADRs vivem em `/adrs` no repositório. Foram registradas **8 ADRs** (mínimo 
 | [0001](../adrs/0001-modular-monolith-vs-microservices.md) | Modular Monolith vs Microservices | Accepted | Agente A |
 | [0002](../adrs/0002-hexagonal-clean-architecture-per-module.md) | Hexagonal / Clean Architecture per Module | Accepted | Agente A |
 | [0003](../adrs/0003-drizzle-vs-prisma-vs-raw-sql.md) | Drizzle ORM vs Prisma vs raw SQL | Accepted | Agente A |
-| 0004 | Supabase Auth vs NextAuth vs Lucia | `[B]` Planned | Agente B |
+| [0004](../adrs/0004-supabase-auth-vs-nextauth-lucia.md) | Supabase Auth vs NextAuth vs Lucia | Accepted | Agente B |
 | [0005](../adrs/0005-rest-openapi-vs-graphql.md) | REST + OpenAPI vs GraphQL vs gRPC | Accepted | Agente A |
 | 0006 | BullMQ + Upstash vs Inngest vs Vercel Cron | `[B]` Planned | Agente B |
 | [0007](../adrs/0007-outbox-pattern.md) | Outbox Pattern para entrega confiável de eventos | Accepted | Agente A |
 | 0008 | FTS Postgres vs MeiliSearch (**reversão**) | `[B]` Planned | Agente B |
+| [0009](../adrs/0009-activity-log-inline-capture.md) | Activity Log inline capture per use case (Memento) | Accepted | Agente A |
 
 Cada ADR contém: contexto, decisão, consequências (positivas/negativas/neutras), e alternativas consideradas. ADR-0008 (a ser escrita pelo Agente B no stint B7) documentará a reversão: inicialmente a equipe considerou MeiliSearch como motor de busca dedicado, e revertou para Full-Text Search do Postgres ao reavaliar o custo operacional vs ganho.
 
@@ -360,9 +361,13 @@ export class IssueTree {
 
 **Problema:** Activity Log precisa capturar o estado completo da Issue antes e depois de cada mudança, com diff legível, sem acoplar a lógica de captura ao Issue.
 
-**Implementação:** `src/modules/issues/domain/ActivitySnapshot.ts`. `ActivitySnapshot.capture(before, after, ...)` produz um Memento imutável com `before`, `after`, `diff` estrutural e `action`.
+**Implementação:**
 
-**Benefício:** time-travel debug, UI rica ("Maria mudou prioridade Low → High"), audit log. **Custo:** payload de cada activity é grande (snapshot completo) — aceito porque mudanças são pouco frequentes.
+- Entity: `src/modules/issues/domain/ActivitySnapshot.ts` — `ActivitySnapshot.capture(before, after, ...)` produz um Memento imutável com `before`, `after`, `diff` estrutural e `action`.
+- Persistência: `ActivityRepository` port + `DrizzleActivityRepository` adapter. Cada use case que altera estado (`CreateIssue`, `TransitionIssue`, `AssignIssue`, `EditIssue`, `SetPriority`) persiste o snapshot inline na mesma transação lógica do save da entity — decisão registrada em [ADR-0009](../adrs/0009-activity-log-inline-capture.md).
+- API: `GET /api/v1/issues/{id}/activity?limit=` retorna a timeline (newest first).
+
+**Benefício:** time-travel debug, UI rica ("Maria mudou prioridade Low → High"), audit log. Atomicidade trivial (Drizzle transação cobre save+activity). **Custo:** payload de cada activity é grande (snapshot completo) — aceito porque mudanças são pouco frequentes.
 
 ### 6.4. Observer (Comportamental) — Agente A
 
@@ -433,6 +438,7 @@ Arquivo: [`openapi/trackr.json`](../openapi/trackr.json). Gerado por `npm run op
 | GET / PATCH | `/api/v1/issues/{issueId}` | Detalhe / editar |
 | POST | `/api/v1/issues/{issueId}/transitions` | Transição de estado (state machine) |
 | GET / POST | `/api/v1/issues/{issueId}/comments` | Listar / criar comentário |
+| GET | `/api/v1/issues/{issueId}/activity` | Timeline de mudanças (Memento snapshots, newest first) |
 | GET / POST | `/api/v1/projects/{projectId}/labels` | Listar / criar label |
 
 `[B]` Endpoints do Agente B (webhooks, notifications, sprints, search, reports): preencher após B11.

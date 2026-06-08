@@ -25,11 +25,12 @@ Veja [`template.md`](./template.md) para o modelo.
 | [0001](./0001-modular-monolith-vs-microservices.md) | Modular Monolith vs Microservices | Accepted | Agente A |
 | [0002](./0002-hexagonal-clean-architecture-per-module.md) | Hexagonal / Clean Architecture per Module | Accepted | Agente A |
 | [0003](./0003-drizzle-vs-prisma-vs-raw-sql.md) | Drizzle ORM vs Prisma vs raw SQL | Accepted | Agente A |
-| 0004 | Supabase Auth vs NextAuth vs Lucia | Planned (stint B1) | Agente B |
+| [0004](./0004-supabase-auth-vs-nextauth-lucia.md) | Supabase Auth vs NextAuth vs Lucia | Accepted | Agente B |
 | [0005](./0005-rest-openapi-vs-graphql.md) | REST + OpenAPI vs GraphQL | Accepted | Agente A |
 | 0006 | BullMQ + Upstash vs Inngest vs Vercel Cron | Planned (stint B2) | Agente B |
 | [0007](./0007-outbox-pattern.md) | Outbox Pattern para entrega confiável de eventos | Accepted | Agente A |
 | 0008 | FTS Postgres vs MeiliSearch (**reversão**) | Planned (stint B7) | Agente B |
+| [0009](./0009-activity-log-inline-capture.md) | Activity Log inline capture per use case (Memento) | Accepted | Agente A |
 
 ## Convenções
 
