@@ -253,7 +253,13 @@ Implementação em `src/modules/issues/domain/IssueTree.ts`.
 
 Quando um Issue muda, `ActivitySnapshot` captura o estado antes/depois e produz diff legível ("Maria mudou prioridade de Low para High").
 
-Implementação em `src/modules/issues/domain/ActivitySnapshot.ts`.
+Implementação:
+
+- Entity em `src/modules/issues/domain/ActivitySnapshot.ts`
+- Port `ActivityRepository` em `src/modules/issues/application/ports/`
+- Adapter `DrizzleActivityRepository` em `src/modules/issues/infrastructure/`
+- Cada use case que altera estado (`CreateIssue`, `TransitionIssue`, `AssignIssue`, `EditIssue`, `SetPriority`) persiste o snapshot **inline** na mesma transação lógica que salva a entity — decisão registrada em [ADR-0009](../../../adrs/0009-activity-log-inline-capture.md).
+- API: `GET /api/v1/issues/{id}/activity` retorna a timeline.
 
 ## 7. Padrões GoF aplicados
 
@@ -466,8 +472,9 @@ TDD encorajado em domain e application (Red → Green → Refactor). Adapters po
 | 0006 | BullMQ + Upstash vs Inngest vs Vercel Cron | Accepted | B |
 | 0007 | Outbox Pattern para entrega confiável de eventos | Accepted | A |
 | 0008 | FTS Postgres vs MeiliSearch (**reversão**) | Accepted (supersedes earlier) | B |
+| 0009 | Activity Log inline capture per use case (Memento) | Accepted | A |
 
-**Mínimo do edital:** 5. **Entregamos:** 8. Um deles é uma REVERSÃO conforme recomendação do edital.
+**Mínimo do edital:** 5. **Entregamos:** 9. Um deles é uma REVERSÃO conforme recomendação do edital.
 
 ## 15. Split de trabalho — Agente A vs Agente B
 
