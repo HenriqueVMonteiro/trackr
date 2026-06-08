@@ -1,14 +1,15 @@
-import { redirect } from "next/navigation";
 import { LogoIcon } from "@/components/icons";
+import { registerAction } from "@/app/(client)/_actions";
 
 export const dynamic = "force-dynamic";
 
-async function registerDemo() {
-  "use server";
-  redirect("/trackr");
+interface Props {
+  searchParams: Promise<{ error?: string }>;
 }
 
-export default function RegisterPage() {
+export default async function RegisterPage({ searchParams }: Props) {
+  const { error } = await searchParams;
+
   return (
     <div className="login-wrap">
       <div className="login-logo">
@@ -17,7 +18,12 @@ export default function RegisterPage() {
       <h1 className="text-2xl font-light mb-4 text-center text-[color:var(--color-fg-default)]">
         Create your account
       </h1>
-      <form className="login-card" action={registerDemo}>
+      <form className="login-card" action={registerAction}>
+        {error && (
+          <div className="mb-3 rounded border border-[color:var(--color-danger-emphasis)] bg-[color:var(--color-danger-subtle)] px-3 py-2 text-sm text-[color:var(--color-danger-fg)]">
+            Could not create the account/workspace. Check the form and database setup.
+          </div>
+        )}
         <label className="block mb-4">
           <span className="field-label">Full name</span>
           <input

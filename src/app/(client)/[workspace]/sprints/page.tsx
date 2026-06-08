@@ -1,15 +1,18 @@
 import Link from "next/link";
 import { Layout, workspaceTabs } from "@/components/Shell";
 import { IterationsIcon, PlusIcon } from "@/components/icons";
-import { store } from "@/lib/demo-store";
+import { getSprintsPageData } from "@/app/(client)/_data";
 import { closeSprintAction, startSprintAction } from "@/app/(client)/_actions";
 
 export const dynamic = "force-dynamic";
 
-export default async function SprintsPage() {
-  const workspace = store.workspace();
-  const sprints = store.sprints();
-  const issues = store.issues();
+interface Props {
+  params: Promise<{ workspace: string }>;
+}
+
+export default async function SprintsPage({ params }: Props) {
+  const { workspace: workspaceSlug } = await params;
+  const { user, workspace, sprints, issues } = await getSprintsPageData(workspaceSlug);
 
   return (
     <Layout
@@ -18,7 +21,7 @@ export default async function SprintsPage() {
         { label: "Sprints" },
       ]}
       tabs={workspaceTabs(workspace.slug, "sprints")}
-      userName="Henrique"
+      userName={user.name}
     >
       <div className="flex justify-between items-start mb-6 gap-4">
         <div>
@@ -65,6 +68,7 @@ export default async function SprintsPage() {
                   {s.status === "planned" && (
                     <form action={startSprintAction}>
                       <input type="hidden" name="sprintId" value={s.id} />
+                      <input type="hidden" name="workspaceSlug" value={workspace.slug} />
                       <button type="submit" className="btn btn-sm btn-primary">
                         Start sprint
                       </button>
@@ -73,6 +77,7 @@ export default async function SprintsPage() {
                   {s.status === "active" && (
                     <form action={closeSprintAction}>
                       <input type="hidden" name="sprintId" value={s.id} />
+                      <input type="hidden" name="workspaceSlug" value={workspace.slug} />
                       <button type="submit" className="btn btn-sm">
                         Close sprint
                       </button>

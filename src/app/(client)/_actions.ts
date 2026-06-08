@@ -1,122 +1,234 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { currentUser, store } from "@/lib/demo-store";
-import type { DemoIssue } from "@/lib/demo";
+import { redirect } from "next/navigation";
 
-const VALID_STATUSES: ReadonlyArray<DemoIssue["status"]> = [
-  "backlog",
-  "todo",
-  "in_progress",
-  "in_review",
-  "done",
-  "canceled",
-];
+import { container } from "@/app/_bootstrap";
+import { unwrap } from "@/shared";
+import { SupabaseAuthProvider } from "@/modules/auth-rls/infrastructure/SupabaseAuthProvider";
+import { SignIn, SignOut, SignUp } from "@/modules/auth-rls/application";
+import { ISSUE_PRIORITIES, type IssuePriority } from "@/modules/issues/domain/IssuePriority";
+import { ISSUE_STATUSES, type IssueStatus } from "@/modules/issues/domain/IssueStatus";
+import { requireAppUser, resolveProjectEntity, resolveWorkspaceEntity } from "@/app/(client)/_data";
 
-const VALID_PRIORITIES: ReadonlyArray<DemoIssue["priority"]> = [
-  "none",
-  "low",
-  "medium",
-  "high",
-  "urgent",
-];
+export async function signInAction(formData: FormData): Promise<void> {
+  const email = String(formData.get("email") ?? "");
+  const password = String(formData.get("password") ?? "");
+  const result = await new SignIn(new SupabaseAuthProvider()).execute({ email, password });
+  if (!result.ok) {
+    redirect("/login?error=invalid-credentials");
+  }
+
+  const userId = result.value.id.value;
+  const workspaces = await container().workspaces.listWorkspacesForUser.execute({ userId });
+  const first = unwrap(workspaces)[0];
+  redirect(first ? `/${first.slug}` : "/register?error=no-workspace");
+}
+
+export async function registerAction(formData: FormData): Promise<void> {
+  const name = String(formData.get("name") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim();
+  const password = String(formData.get("password") ?? "");
+  const slug = String(formData.get("slug") ?? "").trim().toLowerCase();
+  const workspaceName = name ? `${name}'s workspace` : "Trackr workspace";
+
+  const authResult = await new SignUp(new SupabaseAuthProvider()).execute({
+    email,
+    password,
+    ...(name ? { name } : {}),
+  });
+  if (!authResult.ok) {
+    redirect("/register?error=signup-failed");
+  }
+
+  const workspaceResult = await container().workspaces.createWorkspace.execute({
+    name: workspaceName,
+    slug,
+    ownerId: authResult.value.id.value,
+  });
+  if (!workspaceResult.ok) {
+    redirect("/register?error=workspace-failed");
+  }
+
+  redirect(`/${workspaceResult.value.workspace.slug}`);
+}
 
 export async function transitionIssueAction(formData: FormData): Promise<void> {
+  const user = await requireAppUser();
   const issueId = String(formData.get("issueId") ?? "");
-  const to = String(formData.get("to") ?? "") as DemoIssue["status"];
-  if (!VALID_STATUSES.includes(to)) return;
-  store.transitionIssue(issueId, to, currentUser);
-  const project = String(formData.get("projectSlug") ?? "trackr");
-  revalidatePath(`/trackr/projects/${project}/issues/${issueId}`);
-  revalidatePath(`/trackr/projects/${project}`);
-  revalidatePath(`/trackr/dashboard`);
+  const to = parseIssueStatus(String(formData.get("to") ?? ""));
+  if (!issueId || !to) return;
+
+  const result = await container().issues.transitionIssue.execute({
+    actorId: user.id,
+    issueId,
+    to,
+  });
+  if (!result.ok) return;
+
+  revalidateIssuePaths(formData, issueId);
 }
 
 export async function addCommentAction(formData: FormData): Promise<void> {
+  const user = await requireAppUser();
   const issueId = String(formData.get("issueId") ?? "");
-  const body = String(formData.get("body") ?? "");
-  if (!body.trim()) return;
-  store.addComment(issueId, body, currentUser);
-  const project = String(formData.get("projectSlug") ?? "trackr");
-  revalidatePath(`/trackr/projects/${project}/issues/${issueId}`);
+  const body = String(formData.get("body") ?? "").trim();
+  if (!issueId || !body) return;
+
+  const result = await container().comments.createComment.execute({
+    issueId,
+    actorId: user.id,
+    body,
+  });
+  if (!result.ok) return;
+
+  revalidateIssuePaths(formData, issueId);
 }
 
 export async function assignIssueAction(formData: FormData): Promise<void> {
+  const user = await requireAppUser();
   const issueId = String(formData.get("issueId") ?? "");
-  const assigneeName = String(formData.get("assigneeName") ?? "").trim() || null;
-  store.assignIssue(issueId, assigneeName, currentUser);
-  const project = String(formData.get("projectSlug") ?? "trackr");
-  revalidatePath(`/trackr/projects/${project}/issues/${issueId}`);
+  const assigneeId = String(formData.get("assigneeId") ?? "").trim() || null;
+  if (!issueId) return;
+
+  const result = await container().issues.assignIssue.execute({
+    actorId: user.id,
+    issueId,
+    assigneeId,
+  });
+  if (!result.ok) return;
+
+  revalidateIssuePaths(formData, issueId);
 }
 
 export async function createIssueAction(formData: FormData): Promise<void> {
+  const user = await requireAppUser();
+  const workspaceSlug = String(formData.get("workspaceSlug") ?? "trackr");
   const projectSlug = String(formData.get("projectSlug") ?? "trackr");
+  const workspace = await resolveWorkspaceEntity(workspaceSlug, user.id);
+  const project = await resolveProjectEntity(workspace.id, projectSlug);
   const title = String(formData.get("title") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
-  const priorityRaw = String(formData.get("priority") ?? "none") as DemoIssue["priority"];
-  const priority = VALID_PRIORITIES.includes(priorityRaw) ? priorityRaw : "none";
+  const priority = parseIssuePriority(String(formData.get("priority") ?? "none")) ?? "none";
   if (!title) return;
-  const issue = store.createIssue({
-    projectSlug,
+
+  const result = await container().issues.createIssue.execute({
+    actorId: user.id,
+    projectId: project.id,
     title,
     description,
     priority,
-    actor: currentUser,
   });
-  revalidatePath(`/trackr/projects/${projectSlug}`);
-  revalidatePath(`/trackr/dashboard`);
-  redirect(`/trackr/projects/${projectSlug}/issues/${issue.id}`);
+  if (!result.ok) return;
+
+  revalidatePath(`/${workspace.slug}/projects/${project.slug}`);
+  revalidatePath(`/${workspace.slug}/dashboard`);
+  redirect(`/${workspace.slug}/projects/${project.slug}/issues/${result.value.issue.id}`);
 }
 
 export async function createProjectAction(formData: FormData): Promise<void> {
+  const user = await requireAppUser();
+  const workspaceSlug = String(formData.get("workspaceSlug") ?? "trackr");
+  const workspace = await resolveWorkspaceEntity(workspaceSlug, user.id);
   const name = String(formData.get("name") ?? "").trim();
   const slug = String(formData.get("slug") ?? "").trim().toLowerCase();
   const key = String(formData.get("key") ?? "").trim().toUpperCase();
   const description = String(formData.get("description") ?? "").trim();
-  const color = String(formData.get("color") ?? "#0969da");
   if (!name || !slug || !key) return;
-  if (!/^[a-z][a-z0-9-]{1,30}$/.test(slug)) return;
-  if (!/^[A-Z][A-Z0-9]{1,9}$/.test(key)) return;
-  store.createProject({ name, slug, key, description, color });
-  revalidatePath("/trackr");
-  redirect(`/trackr/projects/${slug}`);
+
+  const result = await container().projects.createProject.execute({
+    actorId: user.id,
+    workspaceId: workspace.id,
+    name,
+    slug,
+    key,
+    description,
+  });
+  if (!result.ok) return;
+
+  revalidatePath(`/${workspace.slug}`);
+  redirect(`/${workspace.slug}/projects/${result.value.project.slug}`);
 }
 
 export async function createSprintAction(formData: FormData): Promise<void> {
+  const user = await requireAppUser();
+  const workspaceSlug = String(formData.get("workspaceSlug") ?? "trackr");
+  const workspace = await resolveWorkspaceEntity(workspaceSlug, user.id);
   const name = String(formData.get("name") ?? "").trim();
   const startDate = String(formData.get("startDate") ?? "");
   const endDate = String(formData.get("endDate") ?? "");
-  const committed = parseInt(String(formData.get("committed") ?? "0"), 10) || 0;
+  const capacity = parseInt(String(formData.get("committed") ?? "0"), 10) || 0;
   if (!name || !startDate || !endDate) return;
-  store.createSprint({
+
+  const result = await container().sprints.createSprint.execute({
+    workspaceId: workspace.id,
     name,
-    startDate: new Date(startDate).toISOString(),
-    endDate: new Date(endDate).toISOString(),
-    committed,
+    startDate: new Date(startDate),
+    endDate: new Date(endDate),
+    capacity,
   });
-  revalidatePath("/trackr/sprints");
-  redirect("/trackr/sprints");
+  if (!result.ok) return;
+
+  revalidatePath(`/${workspace.slug}/sprints`);
+  redirect(`/${workspace.slug}/sprints`);
 }
 
 export async function startSprintAction(formData: FormData): Promise<void> {
-  store.startSprint(String(formData.get("sprintId") ?? ""));
-  revalidatePath("/trackr/sprints");
+  await requireAppUser();
+  const sprintId = String(formData.get("sprintId") ?? "");
+  const workspaceSlug = String(formData.get("workspaceSlug") ?? "trackr");
+  if (!sprintId) return;
+
+  const result = await container().sprints.startSprint.execute({ sprintId });
+  if (!result.ok) return;
+  revalidatePath(`/${workspaceSlug}/sprints`);
 }
 
 export async function closeSprintAction(formData: FormData): Promise<void> {
-  store.closeSprint(String(formData.get("sprintId") ?? ""));
-  revalidatePath("/trackr/sprints");
+  await requireAppUser();
+  const sprintId = String(formData.get("sprintId") ?? "");
+  const workspaceSlug = String(formData.get("workspaceSlug") ?? "trackr");
+  if (!sprintId) return;
+
+  const result = await container().sprints.closeSprint.execute({ sprintId });
+  if (!result.ok) return;
+  revalidatePath(`/${workspaceSlug}/sprints`);
 }
 
 export async function deleteIssueAction(formData: FormData): Promise<void> {
+  const user = await requireAppUser();
   const issueId = String(formData.get("issueId") ?? "");
+  const workspaceSlug = String(formData.get("workspaceSlug") ?? "trackr");
   const projectSlug = String(formData.get("projectSlug") ?? "trackr");
-  store.deleteIssue(issueId);
-  revalidatePath(`/trackr/projects/${projectSlug}`);
-  redirect(`/trackr/projects/${projectSlug}`);
+  if (!issueId) return;
+
+  const result = await container().issues.deleteIssue.execute({
+    actorId: user.id,
+    issueId,
+  });
+  if (!result.ok) return;
+
+  revalidatePath(`/${workspaceSlug}/projects/${projectSlug}`);
+  redirect(`/${workspaceSlug}/projects/${projectSlug}`);
 }
 
 export async function signOutAction(): Promise<void> {
+  await new SignOut(new SupabaseAuthProvider()).execute();
   redirect("/login");
+}
+
+function parseIssueStatus(raw: string): IssueStatus | null {
+  return ISSUE_STATUSES.includes(raw as IssueStatus) ? (raw as IssueStatus) : null;
+}
+
+function parseIssuePriority(raw: string): IssuePriority | null {
+  return ISSUE_PRIORITIES.includes(raw as IssuePriority) ? (raw as IssuePriority) : null;
+}
+
+function revalidateIssuePaths(formData: FormData, issueId: string): void {
+  const workspaceSlug = String(formData.get("workspaceSlug") ?? "trackr");
+  const projectSlug = String(formData.get("projectSlug") ?? "trackr");
+  revalidatePath(`/${workspaceSlug}/projects/${projectSlug}/issues/${issueId}`);
+  revalidatePath(`/${workspaceSlug}/projects/${projectSlug}`);
+  revalidatePath(`/${workspaceSlug}/dashboard`);
 }

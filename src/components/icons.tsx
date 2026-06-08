@@ -1,7 +1,7 @@
 // Octicon-style icon set mirroring the design's icons.jsx. Plain SVG to
 // keep the bundle light (no lucide here — the Primer look is curated).
 
-import type { SVGProps } from "react";
+import React, { type SVGProps } from "react";
 
 interface IconProps extends SVGProps<SVGSVGElement> {
   size?: number;

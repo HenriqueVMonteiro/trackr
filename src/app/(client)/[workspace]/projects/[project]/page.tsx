@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { Layout, StatusPill, workspaceTabs } from "@/components/Shell";
 import { CommentIcon, IssueOpenedIcon, PlusIcon, TagIcon } from "@/components/icons";
-import { store } from "@/lib/demo-store";
-import { relative, statusGroup } from "@/lib/demo";
+import { getProjectPageData, relative, statusGroup } from "@/app/(client)/_data";
 
 export const dynamic = "force-dynamic";
 
@@ -12,17 +11,11 @@ interface Props {
 }
 
 export default async function ProjectPage({ params, searchParams }: Props) {
-  const { project: projectSlug } = await params;
+  const { workspace: workspaceSlug, project: projectSlug } = await params;
   const sp = await searchParams;
-  const workspace = store.workspace();
-  const project = store.projectBySlug(projectSlug);
-  const all = store.issuesForProject(projectSlug);
-  const statusFilter = sp.status ? sp.status.split(",") : [];
-  const filtered = all.filter((i) => {
-    if (statusFilter.length > 0 && !statusFilter.includes(i.status)) return false;
-    if (sp.priority && i.priority !== sp.priority) return false;
-    return true;
-  });
+  const { user, workspace, project, issues: filtered, statusFilter } =
+    await getProjectPageData(workspaceSlug, projectSlug, sp);
+  const all = filtered;
   const open = filtered.filter((i) => statusGroup(i.status) === "open").length;
   const closed = filtered.length - open;
 
@@ -33,7 +26,7 @@ export default async function ProjectPage({ params, searchParams }: Props) {
         { label: project.name },
       ]}
       tabs={workspaceTabs(workspace.slug, "projects")}
-      userName="Henrique"
+      userName={user.name}
     >
       <div className="flex justify-between items-start mb-6 gap-4 flex-wrap">
         <div>

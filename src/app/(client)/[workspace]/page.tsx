@@ -1,23 +1,24 @@
 import Link from "next/link";
 import { Layout, workspaceTabs } from "@/components/Shell";
 import { DashboardIcon, IssueClosedIcon, IssueOpenedIcon, PlusIcon } from "@/components/icons";
-import { store } from "@/lib/demo-store";
-import { relative, statusGroup } from "@/lib/demo";
+import { getWorkspacePageData, relative, statusGroup } from "@/app/(client)/_data";
 
 export const dynamic = "force-dynamic";
 
-export default async function WorkspacePage() {
-  const workspace = store.workspace();
-  const projects = store.projects();
-  const team = store.team();
-  const issues = store.issues();
+interface Props {
+  params: Promise<{ workspace: string }>;
+}
+
+export default async function WorkspacePage({ params }: Props) {
+  const { workspace: workspaceSlug } = await params;
+  const { user, workspace, projects, team, issues } = await getWorkspacePageData(workspaceSlug);
   const allOpen = issues.filter((i) => statusGroup(i.status) === "open").length;
 
   return (
     <Layout
       crumbs={[{ label: workspace.name }]}
       tabs={workspaceTabs(workspace.slug, "projects")}
-      userName="Henrique"
+      userName={user.name}
     >
       <div className="flex justify-between items-start mb-6 gap-4 flex-wrap">
         <div>
@@ -54,7 +55,7 @@ export default async function WorkspacePage() {
             </h2>
           </div>
           {projects.map((p) => {
-            const projIssues = store.issuesForProject(p.slug);
+            const projIssues = issues.filter((i) => i.projectId === p.id);
             const open = projIssues.filter((i) => statusGroup(i.status) === "open").length;
             const done = projIssues.filter((i) => i.status === "done").length;
             const lastUpdated = projIssues

@@ -1,13 +1,15 @@
 import { Layout, workspaceTabs } from "@/components/Shell";
-import { store } from "@/lib/demo-store";
-import { statusGroup } from "@/lib/demo";
+import { getDashboardPageData, statusGroup } from "@/app/(client)/_data";
 
 export const dynamic = "force-dynamic";
 
-export default async function DashboardPage() {
-  const workspace = store.workspace();
-  const issues = store.issues();
-  const sprints = store.sprints();
+interface Props {
+  params: Promise<{ workspace: string }>;
+}
+
+export default async function DashboardPage({ params }: Props) {
+  const { workspace: workspaceSlug } = await params;
+  const { user, workspace, issues, sprints } = await getDashboardPageData(workspaceSlug);
   const open = issues.filter((i) => statusGroup(i.status) === "open").length;
   const closed = issues.length - open;
   const dist: Record<string, number> = {
@@ -52,7 +54,7 @@ export default async function DashboardPage() {
         { label: "Dashboard" },
       ]}
       tabs={workspaceTabs(workspace.slug, "dashboard")}
-      userName="Henrique"
+      userName={user.name}
     >
       <div className="mb-6">
         <h1 className="text-2xl font-semibold mb-1.5">Dashboard</h1>

@@ -59,7 +59,7 @@ npm install
 cp .env.example .env.local
 # edite .env.local (ver seção abaixo)
 
-npm run db:migrate     # aplica as migrations Drizzle
+npm run db:push        # sincroniza o schema Drizzle no Supabase em dev
 npm run dev
 ```
 
@@ -75,13 +75,14 @@ Copie `.env.example` para `.env.local` e preencha:
 | `NEXT_PUBLIC_SUPABASE_URL` | URL do projeto Supabase (`https://<ref>.supabase.co`) |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Chave anônima (cliente) do Supabase |
 | `SUPABASE_SERVICE_ROLE_KEY` | Chave service-role (servidor) — usada pelo relay/outbox; **nunca** expor no cliente |
-| `UPSTASH_REDIS_REST_URL` | Endpoint REST do Upstash Redis (cache + filas) |
+| `UPSTASH_REDIS_REST_URL` | Endpoint REST do Upstash Redis usado pelo cache |
 | `UPSTASH_REDIS_REST_TOKEN` | Token REST do Upstash Redis |
 | `RESEND_API_KEY` | Chave da API Resend (envio de e-mail) |
 | `WEB_PUSH_PUBLIC_KEY` | Chave pública VAPID (Web Push) |
 | `WEB_PUSH_PRIVATE_KEY` | Chave privada VAPID (Web Push) |
 | `WEB_PUSH_SUBJECT` | Subject VAPID (ex.: `mailto:dev@trackr.local`) |
 | `REDIS_URL` | Conexão TCP do Redis usada pelo **worker BullMQ** de webhooks (ex.: `redis://localhost:6379`) |
+| `UPSTASH_REDIS_URL` | Alias aceito para a conexão TCP do Upstash Redis (`rediss://...`) usada pelo BullMQ |
 | `NEXT_PUBLIC_APP_URL` | URL pública da aplicação (`http://localhost:3000` em dev) |
 
 > O worker BullMQ (`ioredis`) precisa de uma conexão TCP via `REDIS_URL`,
@@ -89,8 +90,13 @@ Copie `.env.example` para `.env.local` e preencha:
 
 ## Banco de dados: RLS e busca full-text
 
-As migrations Drizzle (`npm run db:migrate`) criam as **tabelas**, mas há SQL que
-o `drizzle-kit` não diffa de forma confiável e que é aplicado à parte.
+O schema Drizzle cria as **tabelas**. Em desenvolvimento/Supabase free, use
+`npm run db:push` para sincronizar o schema diretamente. Em um fluxo com
+migrations versionadas, gere e aplique com `npm run db:generate` +
+`npm run db:migrate`.
+
+Há SQL que o `drizzle-kit` não diffa de forma confiável e que é aplicado à
+parte.
 
 ### Políticas RLS (isolamento multi-tenant)
 

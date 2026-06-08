@@ -1,17 +1,18 @@
-import { redirect } from "next/navigation";
 import { LogoIcon } from "@/components/icons";
+import { signInAction } from "@/app/(client)/_actions";
 
 // Skip static prerender so the page renders at request time. Otherwise
 // the build tries to prerender /login while the Supabase env vars used
 // by the auth-rls middleware are not set in the build environment.
 export const dynamic = "force-dynamic";
 
-async function signInDemo() {
-  "use server";
-  redirect("/trackr");
+interface Props {
+  searchParams: Promise<{ error?: string }>;
 }
 
-export default function LoginPage() {
+export default async function LoginPage({ searchParams }: Props) {
+  const { error } = await searchParams;
+
   return (
     <div className="login-wrap">
       <div className="login-logo">
@@ -20,7 +21,12 @@ export default function LoginPage() {
       <h1 className="text-2xl font-light mb-4 text-center text-[color:var(--color-fg-default)]">
         Sign in to Trackr
       </h1>
-      <form className="login-card" action={signInDemo}>
+      <form className="login-card" action={signInAction}>
+        {error && (
+          <div className="mb-3 rounded border border-[color:var(--color-danger-emphasis)] bg-[color:var(--color-danger-subtle)] px-3 py-2 text-sm text-[color:var(--color-danger-fg)]">
+            Invalid email/password or workspace setup.
+          </div>
+        )}
         <label className="block mb-4">
           <span className="field-label">Email address</span>
           <input

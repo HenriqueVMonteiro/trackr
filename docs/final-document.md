@@ -2,6 +2,7 @@
 
 > **Status:** Consolidado — Agente A (A1–A14) + Agente B (B1–B12) entregues e mergeados em main. 358 testes unitários verde, 9 ADRs aceitas, 7 padrões GoF implementados, 5 princípios SOLID evidenciados.
 > **Repositório:** https://github.com/HenriqueVMonteiro/trackr
+> **Atualização de entrega:** a página principal agora é a landing page pública do Trackr; login/cadastro e as páginas autenticadas principais usam Supabase Auth, Postgres/Supabase via Drizzle, RLS aplicada no banco e Redis/Upstash para cache/fila.
 > **Data:** Junho de 2026
 > **Grupo 1:**
 > - Henrique Vieira Monteiro — RA 20045324 (Agente A — núcleo de domínio + arquitetura + dashboards + UI)
@@ -14,6 +15,8 @@
 ### 1.1. Apresentação e justificativa
 
 O **Trackr** é um sistema de gerenciamento de issues (acompanhamento de tarefas) modular, inspirado em ferramentas como Linear e Jira. Permite que workspaces multitenant organizem projetos contendo issues com um workflow de estados (`backlog → todo → in_progress → in_review → done | canceled`), sub-tarefas, comentários, labels, sprints, dashboards, busca full-text, time tracking, e integrações externas via webhooks e notificações multi-canal (email, push, in-app).
+
+A versão entregue expõe uma landing page pública em `/`, mantendo `/login` e `/register` como fluxos de autenticação. Após autenticação, as páginas de workspace, projetos, issues, dashboard e sprints consomem o composition root (`container()`) e executam os use cases reais sobre Postgres/Supabase, em vez de dados demonstrativos em memória.
 
 A justificativa da escolha é estritamente didática: o domínio é **não-trivial** (atende ao critério do edital), tem **múltiplos bounded contexts** que se prestam a separação modular, e provoca decisões arquiteturais reais (state machine, sub-tarefas hierárquicas, side-effects externos, agregações sobre histórico) que permitem demonstrar SOLID, Clean Code e GoF de forma **objetivamente auditável** pela banca.
 
@@ -850,14 +853,14 @@ Observações preliminares do Agente A:
 
 - Use cases ainda publicam direto ao `InMemoryEventBus`; a integração com `OutboxStore` está infraestruturalmente pronta mas o **refactor das use cases para gravar no Outbox em vez do bus** ficou no backlog (ADR-0007 aponta o caminho).
 - Cobertura por feature: domínio ≥80%; adapters Drizzle exigem testes de integração com Postgres real (planejado em B12).
-- A UI Next.js cliente entra em B11. Até lá, o sistema é exercitado pela API REST + curl.
+- A UI Next.js cliente foi integrada para os fluxos centrais (landing, login, cadastro, workspaces, projetos, issues, dashboard e sprints). Webhooks, notificações e time tracking ainda têm maior cobertura por API/use cases do que por telas dedicadas.
 - Não há ainda observabilidade (logs estruturados, traces). Para produção real, adicionar `pino` + correlation_id no middleware.
 
 Observações do Agente B (infraestrutura periférica + features):
 
-- **Superfície HTTP/UI pendente:** os módulos do Agente B (webhooks, notifications, sprints, timetracking, search) entregam casos de uso atrás de factories (`createXxxModule`); a exposição via rotas REST/server actions e a UI cliente são fechadas no stint **B11**. Até lá, são exercitados por testes unitários e (com credenciais) integração.
+- **Superfície HTTP/UI parcialmente fechada:** os fluxos centrais de produto já estão ligados por server actions ao `container()`. Webhooks, notifications, timetracking, search e relatórios continuam documentados e testados por factories/use cases, com evolução natural para telas dedicadas.
 - **Dependências de serviço externo são plugáveis, não obrigatórias:** o worker BullMQ requer Redis **TCP** (`rediss://`, não o endpoint REST do Upstash); os canais de notificação (Resend/web-push/Realtime) só são registrados quando há credencial — sem ela, `SendNotification` grava status `failed` em vez de quebrar. Isso mantém o núcleo testável sem infraestrutura.
-- **RLS como defesa em profundidade:** as policies impõem o isolamento multi-tenant no banco, mas o caminho user-scoped efetivo (transação injetando o JWT + `set role authenticated`) depende do cliente Drizzle base; está documentado no ADR-0004 e fica como próximo passo de fiação.
+- **RLS como defesa em profundidade:** as policies foram aplicadas no Supabase e impõem isolamento multi-tenant para acessos autenticados diretos. O caminho das server actions ainda combina validação de domínio com conexão backend Drizzle; injetar JWT no cliente Drizzle para executar cada request como `authenticated` permanece como hardening futuro documentado no ADR-0004.
 - **Testes de adapter:** os repositórios Drizzle têm testes de integração que **pulam** sem `DATABASE_URL`; o fluxo crítico E2E (Playwright) exige a aplicação rodando + browsers instalados. Ambos são scaffolding pronto, executável quando a infra de CI estiver disponível.
 
 ---

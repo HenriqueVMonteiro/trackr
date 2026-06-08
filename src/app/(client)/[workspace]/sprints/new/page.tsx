@@ -1,12 +1,17 @@
 import Link from "next/link";
 import { Layout, workspaceTabs } from "@/components/Shell";
-import { store } from "@/lib/demo-store";
+import { getNewSprintPageData } from "@/app/(client)/_data";
 import { createSprintAction } from "@/app/(client)/_actions";
 
 export const dynamic = "force-dynamic";
 
-export default async function NewSprintPage() {
-  const workspace = store.workspace();
+interface Props {
+  params: Promise<{ workspace: string }>;
+}
+
+export default async function NewSprintPage({ params }: Props) {
+  const { workspace: workspaceSlug } = await params;
+  const { user, workspace, sprints } = await getNewSprintPageData(workspaceSlug);
   const today = new Date();
   const in14d = new Date(today.getTime() + 14 * 86_400_000);
   const fmt = (d: Date) => d.toISOString().slice(0, 10);
@@ -19,7 +24,7 @@ export default async function NewSprintPage() {
         { label: "New sprint" },
       ]}
       tabs={workspaceTabs(workspace.slug, "sprints")}
-      userName="Henrique"
+      userName={user.name}
     >
       <div className="mb-6">
         <h1 className="text-2xl font-semibold mb-1.5">Plan a new sprint</h1>
@@ -33,6 +38,7 @@ export default async function NewSprintPage() {
         className="grid gap-4"
         style={{ gridTemplateColumns: "1fr 280px" }}
       >
+        <input type="hidden" name="workspaceSlug" value={workspace.slug} />
         <div>
           <label className="block mb-4">
             <span className="field-label">Sprint name</span>
@@ -41,7 +47,7 @@ export default async function NewSprintPage() {
               className="form-control"
               required
               placeholder="Sprint 8"
-              defaultValue={`Sprint ${store.sprints().length + 1}`}
+              defaultValue={`Sprint ${sprints.length + 1}`}
             />
           </label>
           <div className="grid grid-cols-2 gap-4 mb-4">

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Layout, workspaceTabs } from "@/components/Shell";
-import { store } from "@/lib/demo-store";
+import { getNewIssuePageData } from "@/app/(client)/_data";
 import { createIssueAction } from "@/app/(client)/_actions";
 
 export const dynamic = "force-dynamic";
@@ -10,9 +10,8 @@ interface Props {
 }
 
 export default async function NewIssuePage({ params }: Props) {
-  const { project: projectSlug } = await params;
-  const workspace = store.workspace();
-  const project = store.projectBySlug(projectSlug);
+  const { workspace: workspaceSlug, project: projectSlug } = await params;
+  const { user, workspace, project } = await getNewIssuePageData(workspaceSlug, projectSlug);
 
   return (
     <Layout
@@ -22,7 +21,7 @@ export default async function NewIssuePage({ params }: Props) {
         { label: "New issue" },
       ]}
       tabs={workspaceTabs(workspace.slug, "projects")}
-      userName="Henrique"
+      userName={user.name}
     >
       <div className="mb-6">
         <h1 className="text-2xl font-semibold mb-1.5">New issue</h1>
@@ -37,6 +36,7 @@ export default async function NewIssuePage({ params }: Props) {
         style={{ gridTemplateColumns: "1fr 280px" }}
       >
         <div>
+          <input type="hidden" name="workspaceSlug" value={workspace.slug} />
           <input type="hidden" name="projectSlug" value={project.slug} />
           <label className="block mb-4">
             <span className="field-label">Title</span>

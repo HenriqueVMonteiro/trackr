@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Layout, workspaceTabs } from "@/components/Shell";
-import { store } from "@/lib/demo-store";
+import { getNewProjectPageData } from "@/app/(client)/_data";
 import { createProjectAction } from "@/app/(client)/_actions";
 
 export const dynamic = "force-dynamic";
@@ -16,8 +16,13 @@ const COLORS = [
   "#218bff",
 ];
 
-export default async function NewProjectPage() {
-  const workspace = store.workspace();
+interface Props {
+  params: Promise<{ workspace: string }>;
+}
+
+export default async function NewProjectPage({ params }: Props) {
+  const { workspace: workspaceSlug } = await params;
+  const { user, workspace } = await getNewProjectPageData(workspaceSlug);
 
   return (
     <Layout
@@ -26,7 +31,7 @@ export default async function NewProjectPage() {
         { label: "New project" },
       ]}
       tabs={workspaceTabs(workspace.slug, "projects")}
-      userName="Henrique"
+      userName={user.name}
     >
       <div className="mb-6">
         <h1 className="text-2xl font-semibold mb-1.5">Create a new project</h1>
@@ -40,6 +45,7 @@ export default async function NewProjectPage() {
         className="grid gap-4"
         style={{ gridTemplateColumns: "1fr 280px" }}
       >
+        <input type="hidden" name="workspaceSlug" value={workspace.slug} />
         <div>
           <label className="block mb-4">
             <span className="field-label">Project name</span>
