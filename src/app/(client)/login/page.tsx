@@ -47,7 +47,7 @@ export default function LoginPage() {
         </button>
       </form>
       <div className="login-alt">
-        New to Trackr? <a href="/login">Create an account</a>
+        New to Trackr? <a href="/register">Create an account</a>
       </div>
       <div
         className="muted text-xs text-center"
