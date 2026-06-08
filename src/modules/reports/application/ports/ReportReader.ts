@@ -1,5 +1,7 @@
 import type {
+  BurndownReport,
   CycleTimeReport,
+  SprintVelocity,
   StatusDistribution,
   ThroughputBucket,
 } from "../../domain";
@@ -32,4 +34,13 @@ export interface ReportReader {
   getProjectStatusDistribution(input: {
     projectId: string;
   }): Promise<StatusDistribution>;
+
+  // Velocity: contagem de issues que entraram em done dentro da janela do
+  // sprint (sprintIssues × issues.closedAt entre sprint.start e sprint.end).
+  // Retorna null se o sprint não existe.
+  getSprintVelocity(input: { sprintId: string }): Promise<SprintVelocity | null>;
+
+  // Burndown: para cada dia entre sprint.startDate e min(today, sprint.endDate),
+  // quantas issues do sprint ainda não estavam fechadas.
+  getSprintBurndown(input: { sprintId: string }): Promise<BurndownReport | null>;
 }

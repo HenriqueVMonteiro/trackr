@@ -4,6 +4,8 @@ import {
   GetProjectThroughput,
   GetProjectCycleTime,
   GetProjectStatusDistribution,
+  GetSprintVelocity,
+  GetSprintBurndown,
   type ReportReader,
 } from "./application";
 
@@ -13,6 +15,8 @@ export type {
   GetProjectThroughputInput,
   GetProjectCycleTimeInput,
   GetProjectStatusDistributionInput,
+  GetSprintVelocityInput,
+  GetSprintBurndownInput,
 } from "./application";
 
 export interface ReportsModuleDeps {
@@ -23,6 +27,8 @@ export interface ReportsModule {
   getProjectThroughput: GetProjectThroughput;
   getProjectCycleTime: GetProjectCycleTime;
   getProjectStatusDistribution: GetProjectStatusDistribution;
+  getSprintVelocity: GetSprintVelocity;
+  getSprintBurndown: GetSprintBurndown;
   reader: ReportReader;
 }
 
@@ -32,6 +38,8 @@ export function createReportsModule(deps: ReportsModuleDeps): ReportsModule {
     getProjectThroughput: new GetProjectThroughput(reader),
     getProjectCycleTime: new GetProjectCycleTime(reader),
     getProjectStatusDistribution: new GetProjectStatusDistribution(reader),
+    getSprintVelocity: new GetSprintVelocity(reader),
+    getSprintBurndown: new GetSprintBurndown(reader),
     reader,
   };
 }

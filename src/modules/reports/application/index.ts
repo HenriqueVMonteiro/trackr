@@ -11,3 +11,11 @@ export {
   GetProjectStatusDistribution,
   type GetProjectStatusDistributionInput,
 } from "./use-cases/GetProjectStatusDistribution";
+export {
+  GetSprintVelocity,
+  type GetSprintVelocityInput,
+} from "./use-cases/GetSprintVelocity";
+export {
+  GetSprintBurndown,
+  type GetSprintBurndownInput,
+} from "./use-cases/GetSprintBurndown";

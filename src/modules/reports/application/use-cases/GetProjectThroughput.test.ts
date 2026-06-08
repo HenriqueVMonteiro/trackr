@@ -2,7 +2,9 @@ import { describe, it, expect } from "vitest";
 import { GetProjectThroughput } from "./GetProjectThroughput";
 import type { ReportReader } from "../ports/ReportReader";
 import type {
+  BurndownReport,
   CycleTimeReport,
+  SprintVelocity,
   StatusDistribution,
   ThroughputBucket,
 } from "../../domain";
@@ -23,6 +25,12 @@ class FakeReader implements ReportReader {
       counts: { backlog: 0, todo: 0, in_progress: 0, in_review: 0, done: 0, canceled: 0 },
       total: 0,
     };
+  }
+  async getSprintVelocity(): Promise<SprintVelocity | null> {
+    return null;
+  }
+  async getSprintBurndown(): Promise<BurndownReport | null> {
+    return null;
   }
 }
 
