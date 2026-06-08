@@ -2,7 +2,9 @@
 
 Issue tracker modular para o trabalho final da disciplina de Arquitetura de Software.
 
-Inspirado em Linear / Jira mini, com workspaces, projetos, issues com state machine, sub-tasks, comentários, labels, sprints, webhooks, notificações multi-canal, dashboards, busca full-text e time tracking.
+Inspirado em Linear / Jira mini, com workspaces, projetos, issues com state machine, sub-tasks, comentários, labels, sprints, webhooks, notificações multi-canal, dashboards, busca full-text, time tracking e activity log com snapshots Memento.
+
+**170+ testes unitários** verde no domínio · **9 ADRs** (incluindo uma reversão) · **5+ padrões GoF** demonstrados · **OpenAPI 3.1** gerada do código.
 
 ## Stack
 
@@ -110,6 +112,40 @@ Conforme ISO/IEC 25010:2023:
 3. **Performance** — Cache em camadas, índices, paginação cursor-based
 
 Detalhes e métricas em [`adrs/`](./adrs/) e no [design spec](./docs/superpowers/specs/2026-06-07-trackr-design.md).
+
+## Padrões GoF implementados
+
+| Padrão | Onde | ADR/Stint |
+|---|---|---|
+| **State** | `issues/domain/state/` — workflow de Issue | A6 |
+| **Composite** | `issues/domain/IssueTree.ts` — sub-tasks recursivas | A8 |
+| **Memento** | `issues/domain/ActivitySnapshot.ts` — persistido em `activity` table via `ActivityRepository` | A8 + A13, [ADR-0009](./adrs/0009-activity-log-inline-capture.md) |
+| **Observer** | `shared/events/EventBus.ts` + `OutboxRelay` + subscribers | A4, A9, [ADR-0007](./adrs/0007-outbox-pattern.md) |
+| **Adapter / Factory** | `auth-rls/infrastructure/SupabaseAuthProvider.ts`, `createAuthRlsModule` | B1, [ADR-0004](./adrs/0004-supabase-auth-vs-nextauth-lucia.md) |
+| Strategy / Factory Method / Decorator | webhooks/, notifications/, search/ | B2-B7 (em curso) |
+
+## Endpoints REST principais
+
+Auth via `Authorization: Bearer <JWT-Supabase>`. Errors seguem [RFC 7807 Problem Details](https://datatracker.ietf.org/doc/html/rfc7807).
+
+```
+GET  /api/v1/workspaces
+POST /api/v1/workspaces
+GET  /api/v1/workspaces/{workspaceId}/projects
+POST /api/v1/workspaces/{workspaceId}/projects
+GET  /api/v1/projects/{projectId}/issues?cursor=&limit=&status=&priority=
+POST /api/v1/projects/{projectId}/issues
+GET  /api/v1/issues/{issueId}
+PATCH /api/v1/issues/{issueId}
+POST /api/v1/issues/{issueId}/transitions   { to: "in_progress" }
+GET  /api/v1/issues/{issueId}/comments
+POST /api/v1/issues/{issueId}/comments
+GET  /api/v1/issues/{issueId}/activity      ← Memento timeline
+GET  /api/v1/projects/{projectId}/labels
+POST /api/v1/projects/{projectId}/labels
+```
+
+Spec completa: [`openapi/trackr.json`](./openapi/trackr.json) (gerada de schemas Zod com `npm run openapi:generate`).
 
 ## Licença
 
