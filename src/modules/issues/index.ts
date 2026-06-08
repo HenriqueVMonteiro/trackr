@@ -11,6 +11,7 @@ import {
   SetPriority,
   ListIssuesForProject,
   ListActivityForIssue,
+  GetIssueTree,
   type IssueRepository,
   type ActivityRepository,
 } from "./application";
@@ -35,6 +36,7 @@ export type {
   SetPriorityInput,
   ListIssuesForProjectInput,
   ListActivityForIssueInput,
+  GetIssueTreeInput,
 } from "./application";
 
 export interface IssuesModuleDeps {
@@ -48,6 +50,7 @@ export interface IssuesModuleDeps {
 export interface IssuesModule {
   createIssue: CreateIssue;
   getIssue: GetIssue;
+  getIssueTree: GetIssueTree;
   transitionIssue: TransitionIssue;
   assignIssue: AssignIssue;
   editIssue: EditIssue;
@@ -78,6 +81,7 @@ export function createIssuesModule(deps: IssuesModuleDeps): IssuesModule {
       events: deps.events,
     }),
     getIssue: new GetIssue(repository),
+    getIssueTree: new GetIssueTree(repository),
     transitionIssue: new TransitionIssue(sharedDeps),
     assignIssue: new AssignIssue(sharedDeps),
     editIssue: new EditIssue(sharedDeps),

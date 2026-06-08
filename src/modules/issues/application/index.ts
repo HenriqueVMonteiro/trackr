@@ -40,3 +40,7 @@ export {
   ListActivityForIssue,
   type ListActivityForIssueInput,
 } from "./use-cases/ListActivityForIssue";
+export {
+  GetIssueTree,
+  type GetIssueTreeInput,
+} from "./use-cases/GetIssueTree";
