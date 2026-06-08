@@ -3,7 +3,8 @@ import { RenameWorkspace } from "./RenameWorkspace";
 import { CreateWorkspace } from "./CreateWorkspace";
 import { FrozenClock, SequentialIdGenerator, InMemoryEventBus } from "@/shared";
 import type { WorkspaceRepository } from "../ports/WorkspaceRepository";
-import { type Workspace, WorkspaceMember } from "../../domain";
+import type { WorkspaceMember } from "../../domain";
+import { type Workspace } from "../../domain";
 
 class FakeRepo implements WorkspaceRepository {
   workspaces = new Map<string, Workspace>();
