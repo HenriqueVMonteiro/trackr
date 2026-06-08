@@ -27,7 +27,7 @@ Veja [`template.md`](./template.md) para o modelo.
 | [0003](./0003-drizzle-vs-prisma-vs-raw-sql.md) | Drizzle ORM vs Prisma vs raw SQL | Accepted | Agente A |
 | [0004](./0004-supabase-auth-vs-nextauth-lucia.md) | Supabase Auth vs NextAuth vs Lucia | Accepted | Agente B |
 | [0005](./0005-rest-openapi-vs-graphql.md) | REST + OpenAPI vs GraphQL | Accepted | Agente A |
-| 0006 | BullMQ + Upstash vs Inngest vs Vercel Cron | Planned (stint B2) | Agente B |
+| [0006](./0006-bullmq-vs-inngest-vs-vercel-cron.md) | BullMQ + Upstash vs Inngest vs Vercel Cron | Accepted | Agente B |
 | [0007](./0007-outbox-pattern.md) | Outbox Pattern para entrega confiável de eventos | Accepted | Agente A |
 | 0008 | FTS Postgres vs MeiliSearch (**reversão**) | Planned (stint B7) | Agente B |
 | [0009](./0009-activity-log-inline-capture.md) | Activity Log inline capture per use case (Memento) | Accepted | Agente A |
