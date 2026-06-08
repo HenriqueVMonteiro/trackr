@@ -12,6 +12,7 @@ import { createProjectsModule, type ProjectsModule } from "@/modules/projects";
 import { createIssuesModule, type IssuesModule } from "@/modules/issues";
 import { createCommentsModule, type CommentsModule } from "@/modules/comments";
 import { createLabelsModule, type LabelsModule } from "@/modules/labels";
+import { createWebhooksModule, type WebhooksModule } from "@/modules/webhooks";
 
 // Composition root for the entire application. Route handlers + server
 // actions import container() and get fully-wired modules. Initialized
@@ -28,6 +29,7 @@ export interface AppContainer {
   issues: IssuesModule;
   comments: CommentsModule;
   labels: LabelsModule;
+  webhooks: WebhooksModule;
 }
 
 let _container: AppContainer | null = null;
@@ -69,7 +71,22 @@ export function container(): AppContainer {
     events,
   });
 
-  _container = { db, clock, ids, events, workspaces, projects, issues, comments, labels };
+  // Webhooks usa a InMemoryDeliveryQueue por padrão; o processo worker (B3) injeta
+  // a BullMqDeliveryQueue sobre Redis TCP. Ver ADR-0006.
+  const webhooks = createWebhooksModule({ db, clock, ids, events });
+
+  _container = {
+    db,
+    clock,
+    ids,
+    events,
+    workspaces,
+    projects,
+    issues,
+    comments,
+    labels,
+    webhooks,
+  };
   return _container;
 }
 
