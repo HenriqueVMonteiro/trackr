@@ -1,7 +1,8 @@
 @startuml classes-gof-issues
-title GoF patterns in the Issues bounded context (Agente A)
+title GoF patterns in the Issues bounded context (Agente A) - post A13/A14
 
 skinparam packageStyle rect
+skinparam linetype ortho
 
 package "GoF: State (issues/domain/state)" {
   interface IssueState {
@@ -12,12 +13,14 @@ package "GoF: State (issues/domain/state)" {
   class BacklogState
   class TodoState
   class InProgressState
-  class InReviewState
+  class InReviewState {
+    note: done requires approverId
+  }
   class DoneState {
-    note: only transitions to todo (reopen)
+    note: only -> todo (reopen)
   }
   class CanceledState {
-    note: terminal — rejects all
+    note: terminal, rejects all
   }
 
   IssueState <|.. BacklogState
@@ -41,37 +44,108 @@ class Issue {
   + create(props): Result<Issue>
   + transitionTo(next, at): Result<Issue>
   + assign(userId, at): Issue
+  + setPriority(p, at): Issue
   + edit(fields, at): Result<Issue>
+  + setApprover(uid, at): Issue
 }
 Issue ..> IssueStateMachine : delegates transition
 
-package "GoF: Composite (issues/domain/IssueTree.ts) - implemented in A8" {
-  class IssueTree
-  IssueTree "1" o-- "0..*" Issue : children
-  IssueTree ..> Issue : recursive walk / progress
+package "GoF: Composite (issues/domain/IssueTree.ts)" {
+  class IssueTree {
+    + size(): number
+    + depth(): number
+    + walk(visitor): void
+    + progressPercent(): number
+    + flatten(): Issue[]
+  }
+  IssueTree "1" o-- "0..*" IssueTree : children
+  IssueTree o-- Issue : root
 }
 
-package "GoF: Memento (issues/domain/ActivitySnapshot.ts) - implemented in A8" {
+package "GoF: Memento (issues/domain/ActivitySnapshot.ts) + ADR-0009" {
   class ActivitySnapshot {
+    + id, issueId, actorId, action
     + before: IssueProps | null
     + after: IssueProps
     + diff: structural
+    + isCreation(): boolean
+    + changedFields(): string[]
   }
   ActivitySnapshot ..> Issue : captures
+
+  interface ActivityRepository <<port>> {
+    + save(snapshot)
+    + listByIssue(issueId, limit)
+  }
+  class DrizzleActivityRepository
+  DrizzleActivityRepository ..|> ActivityRepository
+  ActivitySnapshot --> ActivityRepository : persisted by
 }
 
-package "GoF: Observer (shared/events/EventBus.ts)" {
-  interface EventBus {
+package "GoF: Observer (shared/events/EventBus.ts) + ADR-0007" {
+  interface EventBus <<port>> {
     + publish(event)
     + subscribe(type, handler)
   }
-  class InMemoryEventBus implements EventBus
+  class InMemoryEventBus
+  InMemoryEventBus ..|> EventBus
+
+  interface OutboxStore <<port: Writer+Reader, ISP>> {
+    + enqueue(event)
+    + fetchUnpublished(limit)
+    + markPublished(ids, at)
+  }
+  class DrizzleOutboxStore
+  DrizzleOutboxStore ..|> OutboxStore
+
+  class OutboxRelay {
+    + tick(): Promise<number>
+    + start(intervalMs)
+    + stop()
+  }
+  OutboxRelay --> OutboxStore : reads
+  OutboxRelay --> EventBus : publishes to
+}
+
+package "Use cases (orchestrators)" {
+  class CreateIssue
+  class TransitionIssue
+  class AssignIssue
+  class EditIssue
+  class SetPriority
+  class DeleteIssue
+  class GetIssueTree
+  class ListActivityForIssue
+
+  CreateIssue ..> Issue : Issue.create
+  TransitionIssue ..> Issue : transitionTo
+  AssignIssue ..> Issue : assign
+  EditIssue ..> Issue : edit
+  SetPriority ..> Issue : setPriority
+
+  CreateIssue ..> ActivitySnapshot : capture(before=null)
+  TransitionIssue ..> ActivitySnapshot : capture(before, after)
+  AssignIssue ..> ActivitySnapshot
+  EditIssue ..> ActivitySnapshot
+  SetPriority ..> ActivitySnapshot
+
+  CreateIssue ..> ActivityRepository
+  TransitionIssue ..> ActivityRepository
+  AssignIssue ..> ActivityRepository
+  EditIssue ..> ActivityRepository
+  SetPriority ..> ActivityRepository
+
+  GetIssueTree ..> IssueTree : buildIssueTree
+  ListActivityForIssue ..> ActivityRepository
 }
 
 note as N1
   Agente B adiciona seus padrões em
-  diagrams/classes-gof-b.puml
-  (Strategy, Factory Method, Decorator)
+  diagrams/classes-gof-b.puml:
+  - Strategy (RetryStrategy, RankingStrategy, Parser)
+  - Factory Method (NotificationFactory)
+  - Decorator (CachedSearcher)
+  - Adapter (SupabaseAuthProvider) [B1, implementado]
 end note
 
 @enduml

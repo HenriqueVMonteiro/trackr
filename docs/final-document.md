@@ -451,9 +451,80 @@ Arquivo: [`openapi/trackr.json`](../openapi/trackr.json). Gerado por `npm run op
 
 Fonte: [`diagrams/c4-context.puml`](../diagrams/c4-context.puml). Mostra Trackr como sistema central, atores (Dev, PM, Admin) e sistemas externos (Supabase, Upstash, Resend, Web Push, integrações).
 
+Versão Mermaid embutida para renderização GitHub:
+
+```mermaid
+flowchart TB
+    classDef person fill:#08427B,stroke:#073B6F,color:#fff,stroke-width:2px
+    classDef system fill:#1168BD,stroke:#0E5BA6,color:#fff,stroke-width:2px
+    classDef external fill:#999999,stroke:#6B6B6B,color:#fff,stroke-width:2px
+
+    Dev(["👤 Desenvolvedor<br/>resolve issues"]):::person
+    PM(["👤 PM / Tech Lead<br/>planeja sprints"]):::person
+    Admin(["👤 Workspace Owner<br/>configura webhooks"]):::person
+
+    Trackr["🟦 Trackr<br/>Issue tracker modular<br/>Workspaces · Projects · Issues<br/>Sprints · Dashboards · Webhooks"]:::system
+
+    Supabase[("Supabase<br/>Auth + Postgres + Realtime")]:::external
+    Upstash[("Upstash Redis<br/>Cache + Filas BullMQ")]:::external
+    Resend["Resend<br/>Email transacional"]:::external
+    WebPush["Web Push<br/>Browser vendors (VAPID)"]:::external
+    Integ["Integrações externas<br/>Slack · Discord · GitHub"]:::external
+
+    Dev -->|HTTPS| Trackr
+    PM -->|HTTPS| Trackr
+    Admin -->|HTTPS| Trackr
+
+    Trackr -->|JWT + SQL + WS| Supabase
+    Trackr -->|REST| Upstash
+    Trackr -->|REST| Resend
+    Trackr -->|HTTPS + VAPID| WebPush
+    Trackr -->|HTTPS + HMAC-SHA256| Integ
+```
+
 ### 8.2. C4 nível 2 — Containers
 
 Fonte: [`diagrams/c4-container.puml`](../diagrams/c4-container.puml). Detalha a fronteira interna do Trackr: Web App (Next.js), Background Workers (Node + BullMQ), Postgres e Redis.
+
+Versão Mermaid embutida:
+
+```mermaid
+flowchart TB
+    classDef user fill:#08427B,stroke:#073B6F,color:#fff
+    classDef container fill:#438DD5,stroke:#3678B7,color:#fff
+    classDef db fill:#438DD5,stroke:#3678B7,color:#fff,stroke-dasharray: 5 5
+    classDef external fill:#999999,stroke:#6B6B6B,color:#fff
+
+    User(["👤 Usuário"]):::user
+
+    subgraph Trackr["🟦 Trackr"]
+        direction TB
+        Web["Web Application<br/>Next.js 15 + React 19<br/>UI + Server Actions + Route Handlers"]:::container
+        Workers["Background Workers<br/>Node.js + BullMQ<br/>Webhook delivery, notifications, outbox relay"]:::container
+        DB[("Postgres<br/>Supabase<br/>Schemas por módulo + RLS + outbox + materialized views")]:::db
+        Redis[("Redis<br/>Upstash<br/>Cache + filas BullMQ")]:::db
+    end
+
+    SupaAuth["Supabase Auth<br/>JWT + RLS"]:::external
+    SupaRT["Supabase Realtime"]:::external
+    Resend["Resend"]:::external
+    WebPush["Web Push"]:::external
+    Integ["Integrações externas"]:::external
+
+    User -->|HTTPS| Web
+    Web -->|JWT verify| SupaAuth
+    Web -->|SQL via Drizzle| DB
+    Web -->|REST cache| Redis
+    Web -->|Publish events| SupaRT
+
+    Workers -->|Read outbox, write attempts| DB
+    Workers -->|Consume queues| Redis
+    Workers -->|Send| Resend
+    Workers -->|Send| WebPush
+    Workers -->|HMAC-signed| Integ
+
+    SupaRT -.->|WebSocket| User
+```
 
 ### 8.3. Diagrama de classes — GoF aplicados
 
