@@ -1,6 +1,6 @@
 # Trackr
 
-Trackr é um issue tracker modular (estilo Linear / Jira mini) construído como trabalho final da disciplina de Arquitetura de Software: workspaces multi-tenant, projetos, issues com state machine, sub-tasks (Composite), comentários, labels, sprints, webhooks com assinatura e retry, notificações multi-canal, dashboards, busca full-text, time tracking e activity log com snapshots (Memento) — tudo organizado como um monolito modular hexagonal sobre Next.js 15 + TypeScript estrito.
+Trackr é um issue tracker modular (estilo Linear / Jira mini) construído como trabalho final da disciplina de PADRÕES E ARQUITETURA DE SOFTWARE: workspaces multi-tenant, projetos, issues com state machine, sub-tasks (Composite), comentários, labels, sprints, webhooks com assinatura e retry, notificações multi-canal, dashboards, busca full-text, time tracking e activity log com snapshots (Memento) — tudo organizado como um monolito modular hexagonal sobre Next.js 15 + TypeScript estrito.
 
 **Grupo 1:** Henrique Vieira Monteiro (RA 20045324) — Agente A · Gabriel Teixeira Costa (RA 20123097) — Agente B.
 
