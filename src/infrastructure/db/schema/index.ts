@@ -13,3 +13,5 @@ export * from "./activity";
 export * from "./outbox";
 export * from "./webhooks";
 export * from "./notifications";
+export * from "./sprints";
+export * from "./timetracking";
