@@ -42,3 +42,14 @@ export async function PATCH(request: NextRequest, { params }: Context): Promise<
   if (!result.ok) return domainErrorToProblem(result.error);
   return NextResponse.json({ issue: serializeIssue(result.value) });
 }
+
+export async function DELETE(request: NextRequest, { params }: Context): Promise<NextResponse> {
+  const auth = await requireAuth(request);
+  if (!auth.ok) return auth.response;
+
+  const { issueId } = await params;
+  const { issues } = container();
+  const result = await issues.deleteIssue.execute({ actorId: auth.user.id, issueId });
+  if (!result.ok) return domainErrorToProblem(result.error);
+  return new NextResponse(null, { status: 204 });
+}

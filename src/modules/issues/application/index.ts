@@ -44,3 +44,9 @@ export {
   GetIssueTree,
   type GetIssueTreeInput,
 } from "./use-cases/GetIssueTree";
+export {
+  DeleteIssue,
+  type DeleteIssueInput,
+  type DeleteIssueError,
+  type DeleteIssueDeps,
+} from "./use-cases/DeleteIssue";

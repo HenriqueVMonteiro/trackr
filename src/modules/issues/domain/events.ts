@@ -9,6 +9,7 @@ export const ISSUE_EDITED = "issue.edited" as const;
 export const ISSUE_PRIORITY_CHANGED = "issue.priority_changed" as const;
 export const ISSUE_LABELED = "issue.labeled" as const;
 export const ISSUE_UNLABELED = "issue.unlabeled" as const;
+export const ISSUE_DELETED = "issue.deleted" as const;
 
 export interface IssueCreatedPayload {
   issueId: string;
@@ -59,9 +60,17 @@ export interface IssueLabeledPayload {
   actorId: string;
 }
 
+export interface IssueDeletedPayload {
+  issueId: string;
+  projectId: string;
+  number: number;
+  actorId: string;
+}
+
 export type IssueCreatedEvent = DomainEvent<IssueCreatedPayload>;
 export type IssueTransitionedEvent = DomainEvent<IssueTransitionedPayload>;
 export type IssueAssignedEvent = DomainEvent<IssueAssignedPayload>;
 export type IssueEditedEvent = DomainEvent<IssueEditedPayload>;
 export type IssuePriorityChangedEvent = DomainEvent<IssuePriorityChangedPayload>;
 export type IssueLabeledEvent = DomainEvent<IssueLabeledPayload>;
+export type IssueDeletedEvent = DomainEvent<IssueDeletedPayload>;
