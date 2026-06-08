@@ -369,6 +369,64 @@ export const store = {
     return issue;
   },
 
+  createProject(input: {
+    name: string;
+    slug: string;
+    key: string;
+    description: string;
+    color: string;
+  }): DemoProject {
+    const project: DemoProject = {
+      id: `prj_${++idCounter}`,
+      slug: input.slug,
+      key: input.key.toUpperCase(),
+      name: input.name,
+      description: input.description,
+      color: input.color,
+      leadName: currentUser,
+    };
+    snap.projects.push(project);
+    return project;
+  },
+
+  createSprint(input: {
+    name: string;
+    startDate: string;
+    endDate: string;
+    committed: number;
+  }): void {
+    snap.sprints.push({
+      id: `spr_${++idCounter}`,
+      name: input.name,
+      status: "planned",
+      completed: 0,
+      committed: input.committed,
+      startDate: input.startDate,
+      endDate: input.endDate,
+    });
+  },
+
+  startSprint(sprintId: string): void {
+    const s = snap.sprints.find((x) => x.id === sprintId);
+    if (!s) return;
+    snap.sprints.forEach((x) => {
+      if (x.status === "active") x.status = "closed";
+    });
+    s.status = "active";
+  },
+
+  closeSprint(sprintId: string): void {
+    const s = snap.sprints.find((x) => x.id === sprintId);
+    if (s && s.status !== "closed") s.status = "closed";
+  },
+
+  deleteIssue(issueId: string): void {
+    const idx = snap.issues.findIndex((i) => i.id === issueId);
+    if (idx >= 0) snap.issues.splice(idx, 1);
+    delete snap.activityByIssue[issueId];
+    delete snap.commentsByIssue[issueId];
+  },
+
   assignIssue(issueId: string, assigneeName: string | null, actor: string): void {
     const issue = snap.issues.find((i) => i.id === issueId);
     if (!issue) return;

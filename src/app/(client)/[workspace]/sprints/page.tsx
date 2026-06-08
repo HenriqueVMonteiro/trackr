@@ -1,6 +1,8 @@
+import Link from "next/link";
 import { Layout, workspaceTabs } from "@/components/Shell";
-import { IterationsIcon } from "@/components/icons";
+import { IterationsIcon, PlusIcon } from "@/components/icons";
 import { store } from "@/lib/demo-store";
+import { closeSprintAction, startSprintAction } from "@/app/(client)/_actions";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +29,10 @@ export default async function SprintsPage() {
             <code className="font-mono text-xs">/burndown</code>.
           </p>
         </div>
+        <Link href={`/${workspace.slug}/sprints/new`} className="btn btn-sm btn-primary">
+          <PlusIcon size={15} />
+          New sprint
+        </Link>
       </div>
 
       <div className="flex flex-col gap-4">
@@ -55,12 +61,30 @@ export default async function SprintsPage() {
                     {new Date(s.endDate).toLocaleDateString("pt-BR")}
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className="text-2xl font-semibold">
-                    {s.completed}
-                    <span className="muted text-base">/{s.committed}</span>
+                <div className="flex items-start gap-3">
+                  {s.status === "planned" && (
+                    <form action={startSprintAction}>
+                      <input type="hidden" name="sprintId" value={s.id} />
+                      <button type="submit" className="btn btn-sm btn-primary">
+                        Start sprint
+                      </button>
+                    </form>
+                  )}
+                  {s.status === "active" && (
+                    <form action={closeSprintAction}>
+                      <input type="hidden" name="sprintId" value={s.id} />
+                      <button type="submit" className="btn btn-sm">
+                        Close sprint
+                      </button>
+                    </form>
+                  )}
+                  <div className="text-right">
+                    <div className="text-2xl font-semibold">
+                      {s.completed}
+                      <span className="muted text-base">/{s.committed}</span>
+                    </div>
+                    <div className="muted text-xs">issues completed</div>
                   </div>
-                  <div className="muted text-xs">issues completed</div>
                 </div>
               </div>
               <div

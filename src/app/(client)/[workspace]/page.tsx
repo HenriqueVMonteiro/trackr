@@ -29,6 +29,10 @@ export default async function WorkspacePage() {
             <DashboardIcon size={15} />
             Dashboard
           </Link>
+          <Link className="btn btn-sm" href={`/${workspace.slug}/projects/new`}>
+            <PlusIcon size={15} />
+            New project
+          </Link>
           <Link
             className="btn btn-sm btn-primary"
             href={`/${workspace.slug}/projects/${projects[0]?.slug ?? "trackr"}/issues/new`}

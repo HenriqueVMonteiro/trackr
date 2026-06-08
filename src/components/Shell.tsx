@@ -9,6 +9,7 @@ import {
   PlusIcon,
   ProjectIcon,
 } from "./icons";
+import { signOutAction } from "@/app/(client)/_actions";
 
 type Crumb = { label: string; href?: string };
 type TabIcon = "projects" | "dashboard" | "sprints";
@@ -45,12 +46,23 @@ function Header({ userName }: { userName?: string }) {
             <BellIcon size={16} />
           </Link>
           {userName && (
-            <div
-              title={userName}
-              className="w-6 h-6 rounded-full bg-white/20 text-white text-xs flex items-center justify-center font-semibold"
-            >
-              {userName[0]?.toUpperCase() ?? "U"}
-            </div>
+            <>
+              <div
+                title={userName}
+                className="w-6 h-6 rounded-full bg-white/20 text-white text-xs flex items-center justify-center font-semibold"
+              >
+                {userName[0]?.toUpperCase() ?? "U"}
+              </div>
+              <form action={signOutAction}>
+                <button
+                  type="submit"
+                  title="Sign out"
+                  className="px-2 py-1 text-xs rounded hover:bg-white/10 hover:text-white text-white/70"
+                >
+                  Sign out
+                </button>
+              </form>
+            </>
           )}
         </div>
       </div>

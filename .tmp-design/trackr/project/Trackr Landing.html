@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Trackr — O rastreador de issues que sua equipe adota em minutos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="landing/landing.css" />
+  </head>
+  <body>
+    <!-- ===================== NAV ===================== -->
+    <nav class="nav" id="nav">
+      <div class="container nav-inner">
+        <a class="brand" href="#top">
+          <svg width="28" height="28" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+            <circle cx="16" cy="16" r="14" stroke="#15151c" stroke-width="2" opacity="0.3"></circle>
+            <circle cx="16" cy="16" r="8.5" stroke="#6e56cf" stroke-width="2" opacity="0.9"></circle>
+            <circle cx="16" cy="16" r="3" fill="#6e56cf"></circle>
+            <path d="M16 16 L27 7" stroke="#15151c" stroke-width="2.4" stroke-linecap="round"></path>
+          </svg>
+          <span>Trackr</span>
+        </a>
+        <div class="nav-links">
+          <a href="#por-que">Por que Trackr</a>
+          <a href="#recursos">Recursos</a>
+          <a href="#fluxo">Fluxo</a>
+          <a href="#precos">Preços</a>
+        </div>
+        <div class="nav-spacer"></div>
+        <div class="nav-cta">
+          <a class="nav-signin" href="Trackr.html">Entrar</a>
+          <a class="btn btn-primary btn-sm" href="Trackr.html">Começar grátis</a>
+        </div>
+      </div>
+    </nav>
+
+    <!-- ===================== HERO ===================== -->
+    <header class="hero" id="top">
+      <div class="container">
+        <span class="eyebrow reveal">O rastreador de issues moderno</span>
+        <h1 class="reveal">
+          Acompanhe o trabalho.<br />
+          <span class="underline-accent">Sem o peso do Jira.</span>
+        </h1>
+        <p class="hero-sub reveal">
+          Trackr dá ao seu time issues, sprints e dashboards num app rápido e
+          keyboard-first que se aprende em minutos — não em treinamentos de uma semana.
+        </p>
+        <div class="hero-cta reveal">
+          <a class="btn btn-primary btn-lg" href="Trackr.html">Começar grátis</a>
+          <a class="btn btn-ghost btn-lg" href="Trackr.html">
+            Ver demo ao vivo
+            <svg width="17" height="17" viewBox="0 0 16 16" fill="currentColor"><path d="M8.22 2.97a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 1 1-1.06-1.06l2.97-2.97H3.75a.75.75 0 0 1 0-1.5h7.44L8.22 4.03a.75.75 0 0 1 0-1.06Z"></path></svg>
+          </a>
+        </div>
+        <div class="hero-trust reveal">
+          <span>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="#199a5a"><path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 1 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z"></path></svg>
+            Sem cartão de crédito
+          </span>
+          <span>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="#199a5a"><path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 1 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z"></path></svg>
+            Migração do Jira em 1 clique
+          </span>
+          <span>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="#199a5a"><path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 1 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z"></path></svg>
+            Plano gratuito para sempre
+          </span>
+        </div>
+
+        <!-- product mock -->
+        <div class="mock-frame reveal">
+          <div class="mock-top">
+            <div class="mock-dots"><i style="background:#ec6a5e"></i><i style="background:#f4bf4f"></i><i style="background:#61c554"></i></div>
+            <div class="mock-url">app.trackr.dev/trackr/projects/core-domain</div>
+          </div>
+          <div class="mock-body">
+            <aside class="mock-side">
+              <div class="mock-side-item active"><span class="dot" style="background:#6e56cf"></span> Issues</div>
+              <div class="mock-side-item"><span class="dot" style="background:#199a5a"></span> Dashboard</div>
+              <div class="mock-side-item"><span class="dot" style="background:#bf8700"></span> Sprints</div>
+              <div class="mock-side-group">Projetos</div>
+              <div class="mock-side-item"><span class="dot" style="background:#1f883d"></span> Core Domain</div>
+              <div class="mock-side-item"><span class="dot" style="background:#8250df"></span> Platform &amp; Infra</div>
+              <div class="mock-side-item"><span class="dot" style="background:#0969da"></span> Client UI</div>
+            </aside>
+            <div class="mock-main">
+              <div class="mock-h">
+                <h4>Core Domain</h4>
+                <span class="mock-pill" style="background:#6e56cf">12 abertas</span>
+              </div>
+              <div class="mock-row">
+                <span class="mock-status" style="border-color:#8250df;background:#8250df"></span>
+                <span class="mock-row-title">Sub-tasks (Composite) + ActivitySnapshot (Memento)</span>
+                <span class="mock-tag" style="background:#f2effc;color:#4a3aa0">in review</span>
+                <span class="mock-prio"><i style="height:5px;background:#59636e"></i><i style="height:9px;background:#59636e"></i><i style="height:13px;background:#59636e"></i></span>
+                <span class="mock-ava" style="background:#1f883d">HM</span>
+              </div>
+              <div class="mock-row">
+                <span class="mock-status" style="border-color:#bf8700;background:#bf8700"></span>
+                <span class="mock-row-title">EventBus dispatcher + outbox relay worker</span>
+                <span class="mock-tag" style="background:#fff4d6;color:#9a6700">in progress</span>
+                <span class="mock-prio"><i style="height:5px;background:#59636e"></i><i style="height:9px;background:#59636e"></i><i style="height:13px;background:#59636e"></i></span>
+                <span class="mock-ava" style="background:#1f883d">HM</span>
+              </div>
+              <div class="mock-row">
+                <span class="mock-status" style="border-color:#0969da;background:transparent"></span>
+                <span class="mock-row-title">Módulos comments + labels</span>
+                <span class="mock-tag" style="background:#e6f5ec;color:#199a5a">domain</span>
+                <span class="mock-prio"><i style="height:5px;background:#59636e"></i><i style="height:9px;background:#59636e"></i><i style="height:13px;background:#d0d7de"></i></span>
+                <span class="mock-ava" style="background:#1f883d">HM</span>
+              </div>
+              <div class="mock-row">
+                <span class="mock-status" style="border-color:#818b98;background:transparent"></span>
+                <span class="mock-row-title">OpenAPI 3.1 a partir dos schemas Zod</span>
+                <span class="mock-tag" style="background:#fff4d6;color:#9a6700">adr</span>
+                <span class="mock-prio"><i style="height:5px;background:#59636e"></i><i style="height:9px;background:#d0d7de"></i><i style="height:13px;background:#d0d7de"></i></span>
+                <span class="mock-ava" style="background:#0969da">LN</span>
+              </div>
+              <div class="mock-row">
+                <span class="mock-status" style="border-color:#199a5a;background:#199a5a"></span>
+                <span class="mock-row-title">Workflow de Issue como GoF State</span>
+                <span class="mock-tag" style="background:#f2effc;color:#4a3aa0">gof:state</span>
+                <span class="mock-prio"><i style="height:5px;background:#59636e"></i><i style="height:9px;background:#59636e"></i><i style="height:13px;background:#59636e"></i></span>
+                <span class="mock-ava" style="background:#8250df">GC</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- ===================== METRICS ===================== -->
+    <section class="metrics">
+      <div class="container">
+        <div class="metrics-grid">
+          <div class="metric reveal">
+            <div class="metric-num">&lt;<span class="accent">2</span>s</div>
+            <div class="metric-label">para criar uma issue</div>
+          </div>
+          <div class="metric reveal">
+            <div class="metric-num"><span class="accent">5</span> min</div>
+            <div class="metric-label">para migrar do Jira</div>
+          </div>
+          <div class="metric reveal">
+            <div class="metric-num"><span class="accent">0</span></div>
+            <div class="metric-label">horas de treinamento</div>
+          </div>
+          <div class="metric reveal">
+            <div class="metric-num"><span class="accent">100</span>%</div>
+            <div class="metric-label">keyboard-first</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== COMPARISON ===================== -->
+    <section class="compare section-pad" id="por-que">
+      <div class="container">
+        <div class="section-head reveal">
+          <span class="eyebrow">Trackr vs. Jira</span>
+          <h2>Por que times trocam o Jira pelo Trackr</h2>
+          <p>O Jira faz tudo — depois de meses de configuração. O Trackr faz o que importa, e funciona no primeiro dia.</p>
+        </div>
+
+        <div class="compare-table reveal">
+          <div class="compare-head">
+            <div class="ch-label">Capacidade</div>
+            <div class="ch-trackr">
+              <svg width="22" height="22" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="13" stroke="#fff" stroke-width="2" opacity="0.4"></circle><circle cx="16" cy="16" r="3" fill="#fff"></circle><path d="M16 16 L26 7" stroke="#fff" stroke-width="2.4" stroke-linecap="round"></path></svg>
+              Trackr
+            </div>
+            <div class="ch-jira">Jira</div>
+          </div>
+
+          <div class="compare-row">
+            <div class="cr-feature">Criar uma issue</div>
+            <div class="cr-trackr"><span class="tick yes">✓</span> Um atalho, 2 segundos</div>
+            <div class="cr-jira"><span class="tick no">✕</span> Modal com campos obrigatórios</div>
+          </div>
+          <div class="compare-row">
+            <div class="cr-feature">Curva de aprendizado</div>
+            <div class="cr-trackr"><span class="tick yes">✓</span> Minutos, sem manual</div>
+            <div class="cr-jira"><span class="tick no">✕</span> Semanas + treinamento</div>
+          </div>
+          <div class="compare-row">
+            <div class="cr-feature">Velocidade da interface</div>
+            <div class="cr-trackr"><span class="tick yes">✓</span> Instantânea, keyboard-first</div>
+            <div class="cr-jira"><span class="tick no">✕</span> Recarregamentos e spinners</div>
+          </div>
+          <div class="compare-row">
+            <div class="cr-feature">Workflow de status</div>
+            <div class="cr-trackr"><span class="tick yes">✓</span> State machine clara e visual</div>
+            <div class="cr-jira"><span class="tick no">✕</span> Schemes e permissões sem fim</div>
+          </div>
+          <div class="compare-row">
+            <div class="cr-feature">Dashboards e relatórios</div>
+            <div class="cr-trackr"><span class="tick yes">✓</span> Prontos, sem setup</div>
+            <div class="cr-jira"><span class="tick no">✕</span> Plugins pagos e JQL</div>
+          </div>
+          <div class="compare-row">
+            <div class="cr-feature">Preço</div>
+            <div class="cr-trackr"><span class="tick yes">✓</span> Transparente e previsível</div>
+            <div class="cr-jira"><span class="tick no">✕</span> Cresce a cada add-on</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== FEATURES ===================== -->
+    <section class="features" id="recursos">
+      <div class="container">
+        <!-- feature 1 -->
+        <div class="frow reveal">
+          <div class="fcopy">
+            <div class="ficon">
+              <svg width="24" height="24" viewBox="0 0 16 16" fill="currentColor"><path d="M9.504.43a1.516 1.516 0 0 1 2.437 1.713L10.415 5.5h2.123c1.57 0 2.346 1.909 1.22 3.004l-7.34 7.142a1.249 1.249 0 0 1-.871.354h-.302a1.25 1.25 0 0 1-1.157-1.723L5.6 10.5H3.462c-1.57 0-2.346-1.909-1.22-3.004L9.503.429Z"></path></svg>
+            </div>
+            <h3>Rápido como pensar</h3>
+            <p>Cada ação é um atalho. Criar, transicionar, comentar, atribuir — tudo sem tirar as mãos do teclado e sem esperar a tela recarregar.</p>
+            <ul>
+              <li><span class="tick yes">✓</span> Paleta de comandos em tudo</li>
+              <li><span class="tick yes">✓</span> Navegação 100% por teclado</li>
+              <li><span class="tick yes">✓</span> Zero spinners — interface instantânea</li>
+            </ul>
+          </div>
+          <div class="fvisual">
+            <div style="display:flex;flex-direction:column;gap:14px">
+              <div style="display:flex;gap:9px;align-items:center;font-size:14px;color:var(--muted)">
+                <span class="kbd">C</span> nova issue
+                <span class="kbd">/</span> buscar
+                <span class="kbd">A</span> atribuir
+              </div>
+              <div class="vcard" style="display:flex;align-items:center;gap:10px">
+                <span class="mock-status" style="border-color:#bf8700;background:#bf8700"></span>
+                <span style="flex:1;font-size:14.5px;font-weight:500">Notifications: Factory Method multi-canal</span>
+                <span class="mock-tag" style="background:#f2effc;color:#4a3aa0">infra</span>
+              </div>
+              <div style="display:flex;gap:8px;align-items:center;font-size:13px;color:var(--muted)">
+                <span class="kbd" style="border-color:var(--violet);color:var(--violet)">⏎</span>
+                transicionado para <b style="color:var(--ink)">In review</b> · agora
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- feature 2 -->
+        <div class="frow flip reveal" id="fluxo">
+          <div class="fcopy">
+            <div class="ficon">
+              <svg width="24" height="24" viewBox="0 0 16 16" fill="currentColor"><path d="M0 8a4 4 0 0 1 7.465-2H14.5a.75.75 0 0 1 .53.22l1.5 1.5a.75.75 0 0 1 0 1.06l-1.5 1.5a.75.75 0 0 1-.53.22h-.756a.75.75 0 0 1 0-1.5h.445l.75-.75-.75-.75H7.465A4.001 4.001 0 0 1 0 8Zm4-2.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5Z"></path></svg>
+            </div>
+            <h3>Um fluxo que faz sentido</h3>
+            <p>Status são uma máquina de estados visual e clara — não um labirinto de workflow schemes. Todo mundo entende para onde a issue pode ir, e por quê.</p>
+            <ul>
+              <li><span class="tick yes">✓</span> Transições válidas sempre à vista</li>
+              <li><span class="tick yes">✓</span> Regras de aprovação embutidas</li>
+              <li><span class="tick yes">✓</span> Activity log completo de cada mudança</li>
+            </ul>
+          </div>
+          <div class="fvisual">
+            <div class="pipeline">
+              <span class="pl-node" style="background:#818b98">Backlog</span>
+              <span class="pl-arrow">→</span>
+              <span class="pl-node" style="background:#0969da">Todo</span>
+              <span class="pl-arrow">→</span>
+              <span class="pl-node" style="background:#bf8700">In progress</span>
+              <span class="pl-arrow">→</span>
+              <span class="pl-node" style="background:#8250df">In review</span>
+              <span class="pl-arrow">→</span>
+              <span class="pl-node" style="background:#199a5a">Done</span>
+            </div>
+            <div style="margin-top:20px;font-size:13.5px;color:var(--muted);display:flex;align-items:center;gap:8px">
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="#bf8700"><path d="M4 4a4 4 0 0 1 8 0v2h.25c.966 0 1.75.784 1.75 1.75v5.5A1.75 1.75 0 0 1 12.25 15h-8.5A1.75 1.75 0 0 1 2 13.25v-5.5C2 6.784 2.784 6 3.75 6H4Zm1.5 2h5V4a2.5 2.5 0 0 0-5 0Z"></path></svg>
+              <span><b style="color:var(--ink)">In review → Done</b> exige aprovador definido</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- feature 3 -->
+        <div class="frow reveal">
+          <div class="fcopy">
+            <div class="ficon">
+              <svg width="24" height="24" viewBox="0 0 16 16" fill="currentColor"><path d="M1.5 1.75V13.5h13.75a.75.75 0 0 1 0 1.5H.75a.75.75 0 0 1-.75-.75V1.75a.75.75 0 0 1 1.5 0Zm14.28 2.53-5.25 5.25a.75.75 0 0 1-1.06 0L7 7.06 4.28 9.78a.751.751 0 0 1-1.06-1.06l3.25-3.25a.75.75 0 0 1 1.06 0L10 7.94l4.72-4.72a.751.751 0 0 1 1.06 1.06Z"></path></svg>
+            </div>
+            <h3>Relatórios na hora, sem plugins</h3>
+            <p>Throughput, cycle time, distribuição de status e velocity de sprint vêm prontos. Sem JQL, sem add-ons pagos, sem configurar uma única query.</p>
+            <ul>
+              <li><span class="tick yes">✓</span> Cycle time com p50 e p90</li>
+              <li><span class="tick yes">✓</span> Throughput semanal automático</li>
+              <li><span class="tick yes">✓</span> Velocity de sprint sem esforço</li>
+            </ul>
+          </div>
+          <div class="fvisual">
+            <div style="display:flex;gap:14px;margin-bottom:18px">
+              <div class="vcard" style="flex:1">
+                <div style="font-size:13px;color:var(--muted)">Cycle time</div>
+                <div style="font-size:30px;font-weight:700;letter-spacing:-0.03em">2.8d</div>
+                <div style="font-size:12px;color:var(--muted-2)">p50 2.1d · p90 5.4d</div>
+              </div>
+              <div class="vcard" style="flex:1">
+                <div style="font-size:13px;color:var(--muted)">Fechadas / semana</div>
+                <div style="font-size:30px;font-weight:700;letter-spacing:-0.03em;color:var(--green)">9</div>
+                <div style="font-size:12px;color:var(--muted-2)">+50% vs. semana anterior</div>
+              </div>
+            </div>
+            <div class="barchart">
+              <div class="bcol"><i style="height:24%"></i></div>
+              <div class="bcol"><i style="height:42%"></i></div>
+              <div class="bcol"><i style="height:64%"></i></div>
+              <div class="bcol"><i style="height:100%"></i></div>
+              <div class="bcol"><i style="height:70%"></i></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== QUOTE ===================== -->
+    <section class="quote-sec section-pad">
+      <div class="container">
+        <div class="quote reveal">
+          <blockquote>
+            <span class="qmark">“</span>Migramos 1.200 issues do Jira numa tarde. Em uma semana, ninguém da equipe queria voltar.<span class="qmark">”</span>
+          </blockquote>
+          <div class="quote-by">
+            <div class="quote-ava">RM</div>
+            <div class="qn">
+              <b>Rafaela Martins</b>
+              <span>Engineering Lead · time de plataforma</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== CTA BAND ===================== -->
+    <section class="cta-band" id="precos">
+      <div class="cta-glow"></div>
+      <div class="container cta-inner reveal">
+        <span class="eyebrow on-dark">Comece hoje</span>
+        <h2 style="margin-top:18px">Pronto para deixar<br />o Jira para trás?</h2>
+        <p>Plano gratuito para sempre para times pequenos. Sem cartão, sem treinamento, sem dor de cabeça.</p>
+        <div class="hero-cta">
+          <a class="btn btn-on-dark btn-lg" href="Trackr.html">Começar grátis</a>
+          <a class="btn btn-outline-dark btn-lg" href="Trackr.html">Ver demo ao vivo</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== FOOTER ===================== -->
+    <footer class="footer">
+      <div class="container">
+        <div class="footer-grid">
+          <div>
+            <a class="brand" href="#top">
+              <svg width="26" height="26" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+                <circle cx="16" cy="16" r="14" stroke="#f4f3f7" stroke-width="2" opacity="0.3"></circle>
+                <circle cx="16" cy="16" r="8.5" stroke="#a995f2" stroke-width="2"></circle>
+                <circle cx="16" cy="16" r="3" fill="#a995f2"></circle>
+                <path d="M16 16 L27 7" stroke="#f4f3f7" stroke-width="2.4" stroke-linecap="round"></path>
+              </svg>
+              <span>Trackr</span>
+            </a>
+            <p class="footer-about">
+              Issue tracker modular, rápido e keyboard-first. Toda a força de um Jira, sem o peso.
+            </p>
+          </div>
+          <div class="footer-col">
+            <h5>Produto</h5>
+            <a href="Trackr.html">Issues</a>
+            <a href="Trackr.html">Sprints</a>
+            <a href="Trackr.html">Dashboards</a>
+            <a href="#por-que">Trackr vs. Jira</a>
+          </div>
+          <div class="footer-col">
+            <h5>Recursos</h5>
+            <a href="#recursos">Funcionalidades</a>
+            <a href="#fluxo">Workflow</a>
+            <a href="Trackr.html">Demo ao vivo</a>
+            <a href="#precos">Preços</a>
+          </div>
+          <div class="footer-col">
+            <h5>Empresa</h5>
+            <a href="#top">Sobre</a>
+            <a href="#top">Documentação</a>
+            <a href="#top">Migração do Jira</a>
+            <a href="#top">Contato</a>
+          </div>
+        </div>
+        <div class="footer-bottom">
+          <span>© 2026 Trackr · Arquitetura de Software</span>
+          <span>Feito para times que enviam.</span>
+        </div>
+      </div>
+    </footer>
+
+    <script>
+      // sticky nav shadow
+      const nav = document.getElementById("nav");
+      const onScroll = () => nav.classList.toggle("scrolled", window.scrollY > 8);
+      window.addEventListener("scroll", onScroll, { passive: true });
+      onScroll();
+
+      // scroll reveal
+      const reveals = Array.from(document.querySelectorAll(".reveal"));
+      const revealInView = () => {
+        const vh = window.innerHeight || document.documentElement.clientHeight;
+        reveals.forEach((el) => {
+          if (el.classList.contains("in")) return;
+          const r = el.getBoundingClientRect();
+          if (r.top < vh - 40 && r.bottom > 0) el.classList.add("in");
+        });
+      };
+      if ("IntersectionObserver" in window) {
+        const io = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((e) => {
+              if (e.isIntersecting) {
+                e.target.classList.add("in");
+                io.unobserve(e.target);
+              }
+            });
+          },
+          { threshold: 0.12, rootMargin: "0px 0px -40px 0px" },
+        );
+        reveals.forEach((el) => io.observe(el));
+      }
+      // geometry fallback (covers environments where IO doesn't fire)
+      window.addEventListener("scroll", revealInView, { passive: true });
+      window.addEventListener("load", revealInView);
+      revealInView();
+      requestAnimationFrame(revealInView);
+      // ultimate safety: never leave content hidden
+      setTimeout(() => reveals.forEach((el) => el.classList.add("in")), 1400);
+    </script>
+  </body>
+</html>
