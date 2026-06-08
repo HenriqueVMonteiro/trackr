@@ -3,7 +3,9 @@
 > **Status:** rascunho consolidado pelo Agente A; seções marcadas `[B]` aguardam contribuição do Agente B (stints B1–B12).
 > **Repositório:** https://github.com/HenriqueVMonteiro/trackr
 > **Data:** Junho de 2026
-> **Grupo:** *(preencher: membros e matrículas)*
+> **Grupo 1:**
+> - Henrique Vieira Monteiro — RA 20045324 (Agente A)
+> - Gabriel Teixeira Costa — RA 20123097 (Agente B)
 
 ---
 

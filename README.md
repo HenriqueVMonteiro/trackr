@@ -2,6 +2,8 @@
 
 Issue tracker modular para o trabalho final da disciplina de Arquitetura de Software.
 
+**Grupo 1:** Henrique Vieira Monteiro (RA 20045324) — Agente A · Gabriel Teixeira Costa (RA 20123097) — Agente B.
+
 Inspirado em Linear / Jira mini, com workspaces, projetos, issues com state machine, sub-tasks, comentários, labels, sprints, webhooks, notificações multi-canal, dashboards, busca full-text, time tracking e activity log com snapshots Memento.
 
 **170+ testes unitários** verde no domínio · **9 ADRs** (incluindo uma reversão) · **5+ padrões GoF** demonstrados · **OpenAPI 3.1** gerada do código.
