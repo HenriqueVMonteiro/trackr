@@ -1,68 +1,61 @@
-import { getCurrentUser } from "@/modules/auth-rls";
+import { redirect } from "next/navigation";
+import { LogoIcon } from "@/components/icons";
 
-import { signInAction, signUpAction, signOutAction } from "./actions";
+// Skip static prerender so the page renders at request time. Otherwise
+// the build tries to prerender /login while the Supabase env vars used
+// by the auth-rls middleware are not set in the build environment.
+export const dynamic = "force-dynamic";
 
-// Minimal but functional login page (B1 acceptance criterion). Styling/polish and
-// the full client workspace shell land in B11. It is a Server Component: it reads
-// the current user via getCurrentUser() and posts to Server Actions — no client JS.
-export default async function LoginPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ error?: string }>;
-}) {
-  const user = await getCurrentUser();
-  const { error } = await searchParams;
+async function signInDemo() {
+  "use server";
+  redirect("/trackr");
+}
 
-  if (user) {
-    return (
-      <main style={{ maxWidth: 420, margin: "4rem auto", padding: "0 1.5rem" }}>
-        <h1>Trackr</h1>
-        <p>
-          Signed in as <strong>{user.email.value}</strong>
-          {user.name ? ` (${user.name})` : ""}.
-        </p>
-        <form action={signOutAction}>
-          <button type="submit">Sign out</button>
-        </form>
-      </main>
-    );
-  }
-
+export default function LoginPage() {
   return (
-    <main style={{ maxWidth: 420, margin: "4rem auto", padding: "0 1.5rem" }}>
-      <h1>Sign in to Trackr</h1>
-      {error ? (
-        <p role="alert" style={{ color: "#b00020" }}>
-          {error}
-        </p>
-      ) : null}
-      <form style={{ display: "grid", gap: "0.75rem" }}>
-        <label>
-          Name (sign up only)
-          <input name="name" type="text" autoComplete="name" />
-        </label>
-        <label>
-          Email
-          <input name="email" type="email" autoComplete="email" required />
-        </label>
-        <label>
-          Password
+    <div className="login-wrap">
+      <div className="login-logo">
+        <LogoIcon size={48} color="#1f2328" />
+      </div>
+      <h1 className="text-2xl font-light mb-4 text-center text-[color:var(--color-fg-default)]">
+        Sign in to Trackr
+      </h1>
+      <form className="login-card" action={signInDemo}>
+        <label className="block mb-4">
+          <span className="field-label">Email address</span>
           <input
-            name="password"
-            type="password"
-            autoComplete="current-password"
+            className="form-control"
+            type="email"
+            name="email"
+            defaultValue="henrique@trackr.dev"
             required
           />
         </label>
-        <div style={{ display: "flex", gap: "0.5rem" }}>
-          <button type="submit" formAction={signInAction}>
-            Sign in
-          </button>
-          <button type="submit" formAction={signUpAction}>
-            Create account
-          </button>
-        </div>
+        <label className="block mb-[18px]">
+          <div className="flex justify-between items-center mb-1.5">
+            <span className="field-label" style={{ marginBottom: 0 }}>
+              Password
+            </span>
+            <a href="/login" className="text-xs">
+              Forgot password?
+            </a>
+          </div>
+          <input className="form-control" type="password" name="password" defaultValue="········" required />
+        </label>
+        <button type="submit" className="btn btn-primary btn-block">
+          Sign in
+        </button>
       </form>
-    </main>
+      <div className="login-alt">
+        New to Trackr? <a href="/login">Create an account</a>
+      </div>
+      <div
+        className="muted text-xs text-center"
+        style={{ marginTop: 40, marginBottom: 40 }}
+      >
+        Trackr · Arquitetura de Software · Grupo 1 · <a href="/login">Terms</a> · <a href="/login">Privacy</a> ·{" "}
+        <a href="/login">Docs</a>
+      </div>
+    </div>
   );
 }
