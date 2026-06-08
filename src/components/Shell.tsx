@@ -18,21 +18,32 @@ function Header({ userName }: { userName?: string }) {
   return (
     <header className="gh-header">
       <div className="gh-header-inner">
-        <Link className="flex items-center gap-2 font-bold text-base text-white no-underline hover:no-underline" href="/">
+        <Link
+          className="flex items-center gap-2 font-bold text-base text-white no-underline hover:no-underline"
+          href="/trackr"
+        >
           <LogoIcon size={28} />
           <span>Trackr</span>
         </Link>
-        <div className="gh-search">
-          <input type="text" placeholder="Search Trackr…" aria-label="Search" />
-        </div>
+        <form className="gh-search" action="/trackr" method="get">
+          <input type="text" name="q" placeholder="Search Trackr…" aria-label="Search" />
+        </form>
         <div className="flex-1" />
         <div className="flex items-center gap-3.5 text-white/70">
-          <button title="Create new" className="p-1 rounded hover:bg-white/10 hover:text-white">
+          <Link
+            href="/trackr/projects/trackr/issues/new"
+            title="New issue"
+            className="p-1 rounded hover:bg-white/10 hover:text-white inline-flex"
+          >
             <PlusIcon size={16} />
-          </button>
-          <button title="Notifications" className="p-1 rounded hover:bg-white/10 hover:text-white">
+          </Link>
+          <Link
+            href="/trackr"
+            title="Notifications"
+            className="p-1 rounded hover:bg-white/10 hover:text-white inline-flex"
+          >
             <BellIcon size={16} />
-          </button>
+          </Link>
           {userName && (
             <div
               title={userName}

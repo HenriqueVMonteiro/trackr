@@ -1,14 +1,16 @@
 import Link from "next/link";
 import { Layout, workspaceTabs } from "@/components/Shell";
 import { DashboardIcon, IssueClosedIcon, IssueOpenedIcon, PlusIcon } from "@/components/icons";
-import { issues, projects, relative, statusGroup, team, workspace } from "@/lib/demo";
+import { store } from "@/lib/demo-store";
+import { relative, statusGroup } from "@/lib/demo";
 
-interface Props {
-  params: Promise<{ workspace: string }>;
-}
+export const dynamic = "force-dynamic";
 
-export default async function WorkspacePage({ params }: Props) {
-  await params;
+export default async function WorkspacePage() {
+  const workspace = store.workspace();
+  const projects = store.projects();
+  const team = store.team();
+  const issues = store.issues();
   const allOpen = issues.filter((i) => statusGroup(i.status) === "open").length;
 
   return (
@@ -27,10 +29,13 @@ export default async function WorkspacePage({ params }: Props) {
             <DashboardIcon size={15} />
             Dashboard
           </Link>
-          <button className="btn btn-sm btn-primary">
+          <Link
+            className="btn btn-sm btn-primary"
+            href={`/${workspace.slug}/projects/${projects[0]?.slug ?? "trackr"}/issues/new`}
+          >
             <PlusIcon size={15} />
-            New project
-          </button>
+            New issue
+          </Link>
         </div>
       </div>
 
@@ -45,7 +50,7 @@ export default async function WorkspacePage({ params }: Props) {
             </h2>
           </div>
           {projects.map((p) => {
-            const projIssues = issues; // demo: shared pool
+            const projIssues = store.issuesForProject(p.slug);
             const open = projIssues.filter((i) => statusGroup(i.status) === "open").length;
             const done = projIssues.filter((i) => i.status === "done").length;
             const lastUpdated = projIssues
@@ -89,8 +94,8 @@ export default async function WorkspacePage({ params }: Props) {
           <div className="side-section" style={{ paddingTop: 0 }}>
             <div className="side-head">ABOUT</div>
             <div className="text-[13px] leading-6">
-              Monolito modular · Clean Architecture · 358 testes verde · 9 ADRs · padrões GoF: State, Composite,
-              Memento, Observer, Adapter, Factory Method, Strategy, Decorator.
+              Monolito modular · Clean Architecture · 358 testes verde · 9 ADRs · padrões GoF:
+              State, Composite, Memento, Observer, Adapter, Factory Method, Strategy, Decorator.
             </div>
           </div>
           <div className="side-section">

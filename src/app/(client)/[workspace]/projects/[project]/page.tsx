@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { Layout, StatusPill, workspaceTabs } from "@/components/Shell";
 import { CommentIcon, IssueOpenedIcon, PlusIcon, TagIcon } from "@/components/icons";
-import { issues, projects, relative, statusGroup, workspace } from "@/lib/demo";
+import { store } from "@/lib/demo-store";
+import { relative, statusGroup } from "@/lib/demo";
+
+export const dynamic = "force-dynamic";
 
 interface Props {
   params: Promise<{ workspace: string; project: string }>;
@@ -11,9 +14,11 @@ interface Props {
 export default async function ProjectPage({ params, searchParams }: Props) {
   const { project: projectSlug } = await params;
   const sp = await searchParams;
-  const project = projects.find((p) => p.slug === projectSlug) ?? projects[0]!;
+  const workspace = store.workspace();
+  const project = store.projectBySlug(projectSlug);
+  const all = store.issuesForProject(projectSlug);
   const statusFilter = sp.status ? sp.status.split(",") : [];
-  const filtered = issues.filter((i) => {
+  const filtered = all.filter((i) => {
     if (statusFilter.length > 0 && !statusFilter.includes(i.status)) return false;
     if (sp.priority && i.priority !== sp.priority) return false;
     return true;
@@ -39,16 +44,22 @@ export default async function ProjectPage({ params, searchParams }: Props) {
           </h1>
           <p className="muted max-w-xl">{project.description}</p>
         </div>
-        <button className="btn btn-sm btn-primary">
+        <Link
+          href={`/${workspace.slug}/projects/${project.slug}/issues/new`}
+          className="btn btn-sm btn-primary"
+        >
           <PlusIcon size={15} />
           New issue
-        </button>
+        </Link>
       </div>
 
       <div className="box">
         <div
           className="flex items-center gap-4 px-4 py-3"
-          style={{ borderBottom: "1px solid var(--color-border-default)", background: "var(--color-canvas-subtle)" }}
+          style={{
+            borderBottom: "1px solid var(--color-border-default)",
+            background: "var(--color-canvas-subtle)",
+          }}
         >
           <Link
             href={`/${workspace.slug}/projects/${project.slug}`}
@@ -64,12 +75,7 @@ export default async function ProjectPage({ params, searchParams }: Props) {
             {closed} Closed
           </Link>
           <div className="flex-1" />
-          <div className="flex gap-2 text-xs">
-            <button className="btn btn-sm">Author</button>
-            <button className="btn btn-sm">Label</button>
-            <button className="btn btn-sm">Assignee</button>
-            <button className="btn btn-sm">Sort</button>
-          </div>
+          <div className="muted text-xs">{all.length} total issues in project</div>
         </div>
         <ul>
           {filtered.map((i) => (
@@ -104,7 +110,13 @@ export default async function ProjectPage({ params, searchParams }: Props) {
                     </span>
                   </span>
                   {i.priority !== "none" && (
-                    <span className="counter" style={{ background: "var(--color-attention-subtle)", color: "var(--color-attention-fg)" }}>
+                    <span
+                      className="counter"
+                      style={{
+                        background: "var(--color-attention-subtle)",
+                        color: "var(--color-attention-fg)",
+                      }}
+                    >
                       {i.priority}
                     </span>
                   )}

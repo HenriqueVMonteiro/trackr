@@ -1,13 +1,14 @@
 import { Layout, workspaceTabs } from "@/components/Shell";
-import { IterationsIcon, PlusIcon } from "@/components/icons";
-import { issues, sprints, workspace } from "@/lib/demo";
+import { IterationsIcon } from "@/components/icons";
+import { store } from "@/lib/demo-store";
 
-interface Props {
-  params: Promise<{ workspace: string }>;
-}
+export const dynamic = "force-dynamic";
 
-export default async function SprintsPage({ params }: Props) {
-  await params;
+export default async function SprintsPage() {
+  const workspace = store.workspace();
+  const sprints = store.sprints();
+  const issues = store.issues();
+
   return (
     <Layout
       crumbs={[
@@ -26,10 +27,6 @@ export default async function SprintsPage({ params }: Props) {
             <code className="font-mono text-xs">/burndown</code>.
           </p>
         </div>
-        <button className="btn btn-sm btn-primary">
-          <PlusIcon size={15} />
-          New sprint
-        </button>
       </div>
 
       <div className="flex flex-col gap-4">
@@ -89,7 +86,7 @@ export default async function SprintsPage({ params }: Props) {
       <div className="mt-8">
         <h3 className="text-sm font-semibold mb-3">Issues no sprint ativo</h3>
         <div className="box overflow-hidden">
-          {issues.slice(0, 4).map((i) => (
+          {issues.slice(0, 5).map((i) => (
             <div
               key={i.id}
               className="px-4 py-3 flex items-center gap-3 text-sm"

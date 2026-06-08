@@ -1,12 +1,13 @@
 import { Layout, workspaceTabs } from "@/components/Shell";
-import { issues, sprints, statusGroup, workspace } from "@/lib/demo";
+import { store } from "@/lib/demo-store";
+import { statusGroup } from "@/lib/demo";
 
-interface Props {
-  params: Promise<{ workspace: string }>;
-}
+export const dynamic = "force-dynamic";
 
-export default async function DashboardPage({ params }: Props) {
-  await params;
+export default async function DashboardPage() {
+  const workspace = store.workspace();
+  const issues = store.issues();
+  const sprints = store.sprints();
   const open = issues.filter((i) => statusGroup(i.status) === "open").length;
   const closed = issues.length - open;
   const dist: Record<string, number> = {
@@ -20,6 +21,30 @@ export default async function DashboardPage({ params }: Props) {
   issues.forEach((i) => (dist[i.status] = (dist[i.status] ?? 0) + 1));
   const activeSprint = sprints.find((s) => s.status === "active");
 
+  // Cycle time: average days between createdAt and closedAt for done issues
+  const doneWithTime = issues.filter((i) => i.status === "done" && i.closedAt);
+  const cycleTimes = doneWithTime.map(
+    (i) => (new Date(i.closedAt!).getTime() - new Date(i.createdAt).getTime()) / 86_400_000,
+  );
+  const avgCycle =
+    cycleTimes.length > 0
+      ? cycleTimes.reduce((a, b) => a + b, 0) / cycleTimes.length
+      : 0;
+  const sorted = [...cycleTimes].sort((a, b) => a - b);
+  const p50 = sorted.length > 0 ? (sorted[Math.floor(sorted.length / 2)] ?? 0) : 0;
+  const p90 = sorted.length > 0 ? (sorted[Math.floor(sorted.length * 0.9)] ?? sorted[sorted.length - 1] ?? 0) : 0;
+
+  // Throughput: issues closed per week for the last 4 weeks
+  const NOW = Date.now();
+  const WEEK = 7 * 86_400_000;
+  const buckets = [0, 0, 0, 0];
+  issues.forEach((i) => {
+    if (!i.closedAt) return;
+    const ageWeeks = Math.floor((NOW - new Date(i.closedAt).getTime()) / WEEK);
+    if (ageWeeks >= 0 && ageWeeks < 4) buckets[3 - ageWeeks] = (buckets[3 - ageWeeks] ?? 0) + 1;
+  });
+  const maxBucket = Math.max(...buckets, 1);
+
   return (
     <Layout
       crumbs={[
@@ -32,9 +57,9 @@ export default async function DashboardPage({ params }: Props) {
       <div className="mb-6">
         <h1 className="text-2xl font-semibold mb-1.5">Dashboard</h1>
         <p className="muted">
-          Insights agregados via{" "}
-          <code className="font-mono text-xs">/api/v1/projects/&lt;id&gt;/reports/*</code>{" "}
-          (cycle time, throughput, status distribution) e{" "}
+          Métricas calculadas em tempo real a partir das issues do workspace. Em produção, as
+          mesmas seriam servidas pelos endpoints{" "}
+          <code className="font-mono text-xs">/api/v1/projects/&lt;id&gt;/reports/*</code> e{" "}
           <code className="font-mono text-xs">/api/v1/sprints/&lt;id&gt;/{`{velocity,burndown}`}</code>.
         </p>
       </div>
@@ -65,7 +90,7 @@ export default async function DashboardPage({ params }: Props) {
                   key={s}
                   title={`${s}: ${dist[s]}`}
                   style={{
-                    width: `${((dist[s] ?? 0) / issues.length) * 100}%`,
+                    width: `${((dist[s] ?? 0) / Math.max(issues.length, 1)) * 100}%`,
                     background: `var(--color-st-${s.replace("_", "-")})`,
                   }}
                 />
@@ -86,34 +111,41 @@ export default async function DashboardPage({ params }: Props) {
         </div>
       </div>
 
-      {/* burndown text */}
+      {/* cycle time + throughput */}
       <div className="grid grid-cols-2 gap-4">
         <div className="box p-4">
           <div className="text-sm font-semibold mb-2">Cycle time (rolling)</div>
-          <div className="text-3xl font-semibold mb-1">3.2 dias</div>
-          <div className="muted text-xs">avg · p50 2.5d · p90 6.8d · sample 11</div>
+          <div className="text-3xl font-semibold mb-1">{avgCycle.toFixed(1)} dias</div>
+          <div className="muted text-xs">
+            avg · p50 {p50.toFixed(1)}d · p90 {p90.toFixed(1)}d · sample {doneWithTime.length}
+          </div>
           <div
             className="mt-3 pt-3 muted text-xs"
             style={{ borderTop: "1px solid var(--color-border-muted)" }}
           >
-            Fonte: <code className="font-mono">DrizzleReportReader.getProjectCycleTime</code> com{" "}
-            <code className="font-mono">PERCENTILE_CONT</code> em Postgres.
+            Fonte: <code className="font-mono">DrizzleReportReader.getProjectCycleTime</code>{" "}
+            usaria <code className="font-mono">PERCENTILE_CONT</code> em Postgres; aqui calculado
+            in-memory.
           </div>
         </div>
         <div className="box p-4">
           <div className="text-sm font-semibold mb-2">Throughput (últimas 4 semanas)</div>
           <div className="flex items-end gap-2 h-24">
-            {[3, 5, 4, 7].map((v, i) => (
+            {buckets.map((v, i) => (
               <div key={i} className="flex-1 flex flex-col items-center justify-end">
                 <div
                   className="w-full rounded-sm"
                   style={{
-                    height: `${v * 12}px`,
-                    background: "var(--color-success-emphasis)",
+                    height: `${(v / maxBucket) * 80 + 4}px`,
+                    background:
+                      v > 0
+                        ? "var(--color-success-emphasis)"
+                        : "var(--color-neutral-muted)",
                   }}
                   title={`Semana ${i + 1}: ${v}`}
                 />
                 <div className="muted text-xs mt-1">W{i + 1}</div>
+                <div className="muted text-xs">{v}</div>
               </div>
             ))}
           </div>
@@ -121,7 +153,8 @@ export default async function DashboardPage({ params }: Props) {
             className="mt-3 pt-3 muted text-xs"
             style={{ borderTop: "1px solid var(--color-border-muted)" }}
           >
-            Fonte: <code className="font-mono">getProjectThroughput</code> · bucketed por semana.
+            Fonte: <code className="font-mono">getProjectThroughput</code> — bucketed por semana
+            via <code className="font-mono">date_trunc(&apos;week&apos;, closed_at)</code>.
           </div>
         </div>
       </div>
