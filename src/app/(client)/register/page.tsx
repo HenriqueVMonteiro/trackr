@@ -9,6 +9,7 @@ interface Props {
 
 export default async function RegisterPage({ searchParams }: Props) {
   const { error } = await searchParams;
+  const errorMessage = registerErrorMessage(error);
 
   return (
     <div className="login-wrap">
@@ -19,9 +20,9 @@ export default async function RegisterPage({ searchParams }: Props) {
         Create your account
       </h1>
       <form className="login-card" action={registerAction}>
-        {error && (
+        {errorMessage && (
           <div className="mb-3 rounded border border-[color:var(--color-danger-emphasis)] bg-[color:var(--color-danger-subtle)] px-3 py-2 text-sm text-[color:var(--color-danger-fg)]">
-            Could not create the account/workspace. Check the form and database setup.
+            {errorMessage}
           </div>
         )}
         <label className="block mb-4">
@@ -94,4 +95,26 @@ export default async function RegisterPage({ searchParams }: Props) {
       </div>
     </div>
   );
+}
+
+export function registerErrorMessage(error?: string): string | null {
+  switch (error) {
+    case "email-taken":
+      return "This email already exists. Sign in with it, or use another email address.";
+    case "weak-password":
+      return "Use a stronger password with at least 8 characters, including a number and a lowercase letter.";
+    case "workspace-slug-taken":
+      return "Use a different workspace slug. This one is already taken.";
+    case "workspace-invalid":
+      return "Use a lowercase kebab-case workspace slug, for example my-team.";
+    case "user-sync-failed":
+      return "The account was created, but syncing it to the database failed. Try signing in, or try again with another email.";
+    case "signup-failed":
+      return "Could not create the Supabase account. Use a real email address and a valid password.";
+    case "workspace-failed":
+    case "no-workspace":
+      return "Could not create the workspace. Try another workspace slug.";
+    default:
+      return null;
+  }
 }

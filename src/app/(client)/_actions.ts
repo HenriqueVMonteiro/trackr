@@ -39,11 +39,15 @@ export async function registerAction(formData: FormData): Promise<void> {
     ...(name ? { name } : {}),
   });
   if (!authResult.ok) {
-    redirect("/register?error=signup-failed");
+    redirect(`/register?error=${registerAuthErrorCode(authResult.error)}`);
   }
 
   const app = container();
-  await ensureUserMirror(app.db, authResult.value);
+  try {
+    await ensureUserMirror(app.db, authResult.value);
+  } catch {
+    redirect("/register?error=user-sync-failed");
+  }
 
   const workspaceResult = await app.workspaces.createWorkspace.execute({
     name: workspaceName,
@@ -51,7 +55,7 @@ export async function registerAction(formData: FormData): Promise<void> {
     ownerId: authResult.value.id.value,
   });
   if (!workspaceResult.ok) {
-    redirect("/register?error=workspace-failed");
+    redirect(`/register?error=${registerWorkspaceErrorCode(workspaceResult.error)}`);
   }
 
   redirect(`/${workspaceResult.value.workspace.slug}`);
@@ -235,4 +239,24 @@ function revalidateIssuePaths(formData: FormData, issueId: string): void {
   revalidatePath(`/${workspaceSlug}/projects/${projectSlug}/issues/${issueId}`);
   revalidatePath(`/${workspaceSlug}/projects/${projectSlug}`);
   revalidatePath(`/${workspaceSlug}/dashboard`);
+}
+
+function registerAuthErrorCode(error: unknown): string {
+  const code = domainErrorCode(error);
+  if (code === "email_taken") return "email-taken";
+  if (code === "weak_password") return "weak-password";
+  return "signup-failed";
+}
+
+function registerWorkspaceErrorCode(error: unknown): string {
+  const code = domainErrorCode(error);
+  if (code === "conflict") return "workspace-slug-taken";
+  if (code === "validation") return "workspace-invalid";
+  return "workspace-failed";
+}
+
+function domainErrorCode(error: unknown): string | null {
+  if (!error || typeof error !== "object" || !("code" in error)) return null;
+  const code = (error as { code?: unknown }).code;
+  return typeof code === "string" ? code : null;
 }

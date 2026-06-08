@@ -1,5 +1,9 @@
 import { ok, err, type Result } from "@/shared/result";
-import type { User, AuthError as SupabaseAuthError } from "@supabase/supabase-js";
+import {
+  createClient,
+  type User,
+  type AuthError as SupabaseAuthError,
+} from "@supabase/supabase-js";
 
 import type {
   AuthError,
@@ -14,6 +18,7 @@ import {
   WeakPasswordError,
 } from "../domain/errors";
 import { createServerSupabaseClient } from "./supabase/serverClient";
+import { supabaseServiceRoleKey, supabaseUrl } from "./supabase/env";
 
 // ADR-0004 — Supabase Auth é o provedor de autenticação (vs NextAuth/Lucia).
 // GoF: Adapter — adapta o SDK do Supabase Auth à port AuthProvider, de modo que
@@ -37,6 +42,11 @@ export class SupabaseAuthProvider implements AuthProvider {
   async signUp(
     credentials: SignUpCredentials,
   ): Promise<Result<UserContext, AuthError>> {
+    const serviceRoleKey = supabaseServiceRoleKey();
+    if (serviceRoleKey) {
+      return this.signUpWithAdmin(credentials, serviceRoleKey);
+    }
+
     const supabase = await createServerSupabaseClient();
     const { data, error } = await supabase.auth.signUp({
       email: credentials.email,
@@ -51,6 +61,44 @@ export class SupabaseAuthProvider implements AuthProvider {
       return err(new EmailTakenError(credentials.email));
     }
     return this.toUserContext(data.user);
+  }
+
+  private async signUpWithAdmin(
+    credentials: SignUpCredentials,
+    serviceRoleKey: string,
+  ): Promise<Result<UserContext, AuthError>> {
+    const admin = createClient(supabaseUrl(), serviceRoleKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    });
+
+    const { data: created, error: createError } = await admin.auth.admin.createUser({
+      email: credentials.email,
+      password: credentials.password,
+      email_confirm: true,
+      user_metadata: credentials.name ? { name: credentials.name } : undefined,
+    });
+    if (createError) {
+      return err(this.mapSignUpError(createError, credentials.email));
+    }
+    if (!created.user) {
+      return err(new InvalidCredentialsError());
+    }
+
+    const supabase = await createServerSupabaseClient();
+    const { data: signedIn, error: signInError } =
+      await supabase.auth.signInWithPassword({
+        email: credentials.email,
+        password: credentials.password,
+      });
+
+    if (signInError || !signedIn.user) {
+      return this.toUserContext(created.user);
+    }
+
+    return this.toUserContext(signedIn.user);
   }
 
   // Map Supabase's signup errors to the port's distinct domain errors instead of

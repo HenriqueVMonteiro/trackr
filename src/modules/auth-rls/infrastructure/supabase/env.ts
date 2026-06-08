@@ -19,3 +19,7 @@ export function supabaseUrl(): string {
 export function supabaseAnonKey(): string {
   return requireEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY");
 }
+
+export function supabaseServiceRoleKey(): string | null {
+  return process.env.SUPABASE_SERVICE_ROLE_KEY || null;
+}
